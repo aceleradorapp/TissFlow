@@ -40,16 +40,20 @@ exports.register = async (req, res) => {
       return res.status(500).json({ error: 'Role padrão não encontrada. Execute os seeders.' });
     }
 
-    // Atribui o plano mais barato existente ao novo usuário (fallback null se não houver planos)
-    const defaultPlan = await Plan.findOne({ order: [['price', 'ASC']] });
+    // Atribui o plano Free Trial ao novo usuário com 30 dias de validade
+    const trialPlan = await Plan.findOne({ where: { name: 'Free Trial' } });
+
+    const trialEndsAt = new Date();
+    trialEndsAt.setDate(trialEndsAt.getDate() + 30);
 
     // O hook beforeCreate do Model hasheia a senha automaticamente
     const user = await User.create({
       name,
       email,
       password,
-      role_id: prestadorRole.id,
-      plan_id:  defaultPlan?.id ?? null,
+      role_id:       prestadorRole.id,
+      plan_id:       trialPlan?.id ?? null,
+      trial_ends_at: trialPlan ? trialEndsAt : null,
       status: 'active',
     });
 

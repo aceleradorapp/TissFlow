@@ -1,13 +1,13 @@
 'use strict';
 
-const { Router } = require('express');
-const auth  = require('../../middlewares/authMiddleware');
-const ctrl  = require('../../controllers/tools/versionComparatorController');
+const { Router }     = require('express');
+const auth           = require('../../middlewares/authMiddleware');
+const checkTrial     = require('../../middlewares/checkTrialStatus');
+const ctrl           = require('../../controllers/tools/versionComparatorController');
 
 const router = Router();
 
-// Any logged-in user can read version diffs
-router.get('/versions', auth, ctrl.listVersions);
-router.get('/',         auth, ctrl.getDiff);
+router.get('/versions', auth, checkTrial, ctrl.listVersions);
+router.get('/',         auth, checkTrial, ctrl.getDiff);
 
 module.exports = router;

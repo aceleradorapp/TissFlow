@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, Fragment } from 'react';
 import {
   GitCompare, Loader2, Plus, Minus, RefreshCw,
   AlertCircle, Search, X, ChevronDown, ArrowRight,
-  Tag, Code2, FileDown,
+  Tag, Code2, FileDown, Lock, Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '../../../components/DashboardLayout';
@@ -314,6 +314,97 @@ function ContextXmlModal({ row, onClose }) {
   );
 }
 
+// ── Upgrade Modal ─────────────────────────────────────────────────────────────
+
+const UPGRADE_PLANS = [
+  { name: 'Bronze', price: 'R$ 49,90/mês',  color: 'text-amber-700 dark:text-amber-400',  bg: 'bg-amber-500/10',  border: 'border-amber-400/40'  },
+  { name: 'Prata',  price: 'R$ 99,90/mês',  color: 'text-slate-500 dark:text-slate-300',  bg: 'bg-slate-500/10',  border: 'border-slate-400/40'  },
+  { name: 'Ouro',   price: 'R$ 199,90/mês', color: 'text-yellow-600 dark:text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-400/40' },
+];
+
+function UpgradeModal({ onClose }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl
+                   bg-white dark:bg-slate-900
+                   border border-slate-200 dark:border-slate-700/60"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4
+                        border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center">
+              <Zap size={15} className="text-blue-500" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-800 dark:text-slate-100">Recurso Premium</p>
+              <p className="text-[11px] text-slate-400">Disponível nos planos pagos</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        {/* Body */}
+        <div className="px-5 py-5">
+          <div className="flex items-start gap-3 p-3.5 rounded-xl
+                          bg-amber-50 dark:bg-amber-500/10
+                          border border-amber-200 dark:border-amber-500/30 mb-5">
+            <Lock size={14} className="text-amber-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
+              A exportação de relatórios em PDF está disponível a partir do plano <strong>Bronze</strong>.
+              Faça upgrade para desbloquear esta e outras funcionalidades avançadas.
+            </p>
+          </div>
+
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+            Escolha seu plano
+          </p>
+
+          <div className="flex flex-col gap-2.5">
+            {UPGRADE_PLANS.map(plan => (
+              <div
+                key={plan.name}
+                className={`flex items-center justify-between px-4 py-3 rounded-xl border ${plan.bg} ${plan.border}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Zap size={13} className={plan.color} />
+                  <span className={`text-sm font-bold ${plan.color}`}>{plan.name}</span>
+                </div>
+                <span className={`text-xs font-semibold ${plan.color}`}>{plan.price}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 pb-5">
+          <p className="text-center text-xs text-slate-400 mb-3">
+            Entre em contato com o administrador para fazer upgrade do seu plano.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 rounded-xl text-sm font-semibold
+                       bg-blue-600 hover:bg-blue-700 text-white
+                       transition-colors shadow-sm"
+          >
+            Entendido
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── PDF generator ─────────────────────────────────────────────────────────────
 
 async function generatePdf({ filteredRows, sourceVersion, targetVersion, selectedGuiaType, activeFilter, search }) {
@@ -472,9 +563,20 @@ export default function VersionComparator() {
   const [selectedGuiaType, setSelectedGuiaType] = useState('');
 
   // Feature states
-  const [expandedRows, setExpandedRows] = useState(new Set());
-  const [xmlModalRow,  setXmlModalRow]  = useState(null);
-  const [exportingPdf, setExportingPdf] = useState(false);
+  const [expandedRows,    setExpandedRows]    = useState(new Set());
+  const [xmlModalRow,     setXmlModalRow]     = useState(null);
+  const [exportingPdf,    setExportingPdf]    = useState(false);
+  const [userProfile,     setUserProfile]     = useState(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  // ── Load user profile for plan check ──────────────────────────────────────
+  useEffect(() => {
+    api.get('/auth/profile')
+      .then(({ data }) => setUserProfile(data.user))
+      .catch(() => {});
+  }, []);
+
+  const canExportPdf = userProfile?.plan?.name !== 'Free Trial';
 
   // ── Load versions on mount ─────────────────────────────────────────────────
   useEffect(() => {
@@ -712,19 +814,33 @@ export default function VersionComparator() {
 
           {/* PDF export — always rightmost */}
           <div className="ml-auto">
-            <button
-              onClick={handleExportPdf}
-              disabled={exportingPdf || filteredRows.length === 0}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold
-                         bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed
-                         text-white transition-colors shadow-sm"
-            >
-              {exportingPdf
-                ? <Loader2 size={13} className="animate-spin" />
-                : <FileDown size={13} />
-              }
-              {exportingPdf ? 'Gerando…' : 'Exportar PDF'}
-            </button>
+            {canExportPdf ? (
+              <button
+                onClick={handleExportPdf}
+                disabled={exportingPdf || filteredRows.length === 0}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold
+                           bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed
+                           text-white transition-colors shadow-sm"
+              >
+                {exportingPdf
+                  ? <Loader2 size={13} className="animate-spin" />
+                  : <FileDown size={13} />
+                }
+                {exportingPdf ? 'Gerando…' : 'Exportar PDF'}
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowUpgradeModal(true)}
+                title="Exportação de PDF disponível apenas em planos pagos"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold
+                           bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700
+                           text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700
+                           transition-colors"
+              >
+                <Lock size={13} />
+                Exportar PDF
+              </button>
+            )}
           </div>
         </div>
 
@@ -953,6 +1069,11 @@ export default function VersionComparator() {
       {/* XML Modal — rendered at root level to escape table stacking context */}
       {xmlModalRow && (
         <ContextXmlModal row={xmlModalRow} onClose={() => setXmlModalRow(null)} />
+      )}
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <UpgradeModal onClose={() => setShowUpgradeModal(false)} />
       )}
     </DashboardLayout>
   );
