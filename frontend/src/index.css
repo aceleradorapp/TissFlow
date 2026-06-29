@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25%       { transform: translate(-24px, -30px) scale(1.02); }
+  50%       { transform: translate(14px, -12px) scale(0.98); }
+  75%       { transform: translate(-8px, 22px) scale(1.01); }
+}
+
+@keyframes float-alt {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%       { transform: translate(28px, 18px) scale(0.97); }
+  66%       { transform: translate(-16px, -26px) scale(1.02); }
+}
+
+@keyframes fade-slide-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-float         { animation: float         22s ease-in-out infinite; }
+.animate-float-alt     { animation: float-alt     28s ease-in-out infinite; }
+.animate-fade-slide-in { animation: fade-slide-in 0.28s ease-out both; }

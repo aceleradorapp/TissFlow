@@ -1,0 +1,29 @@
+# Node.js - Dependências Globais e Locais
+node_modules/
+dist/
+build/
+.npm/
+*.log
+
+# Ambientes e Chaves Privadas (Segurança Crítica)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDEs e Editores de Código
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Sistema Operacional
+.DS_Store
+Thumbs.db
+
+# Armazenamento Temporário de Schemas ou Uploads do Usuário
+backend/src/storage/temp/
