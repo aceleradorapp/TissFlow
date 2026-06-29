@@ -23,3 +23,35 @@
 .animate-float         { animation: float         22s ease-in-out infinite; }
 .animate-float-alt     { animation: float-alt     28s ease-in-out infinite; }
 .animate-fade-slide-in { animation: fade-slide-in 0.28s ease-out both; }
+
+/* ── Sidebar scrollbar ───────────────────────────────────────────────────────── */
+
+/* Firefox */
+.sidebar-nav {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.sidebar-nav:hover {
+  scrollbar-color: rgb(203 213 225) transparent; /* slate-300 */
+}
+.dark .sidebar-nav:hover {
+  scrollbar-color: rgb(71 85 105) transparent;   /* slate-600 */
+}
+
+/* Webkit (Chrome, Edge, Safari) */
+.sidebar-nav::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 9999px;
+}
+.sidebar-nav:hover::-webkit-scrollbar-thumb {
+  background: rgb(203 213 225); /* slate-300 — light mode */
+}
+.dark .sidebar-nav:hover::-webkit-scrollbar-thumb {
+  background: rgb(71 85 105);   /* slate-600 — dark mode */
+}

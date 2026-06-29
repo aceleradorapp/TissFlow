@@ -143,7 +143,7 @@ export default function DashboardLayout({ children }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2">
+        <nav className="flex-1 overflow-y-auto py-3 px-2 sidebar-nav">
           {isAdmin ? (
             <>
               <SectionLabel text="Admin" />
