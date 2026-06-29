@@ -8,8 +8,10 @@ import GuiaViewer      from './GuiaViewer';
 import XmlDrawer       from './XmlDrawer';
 import {
   FileCode2, RefreshCw, Code2,
-  BadgeCheck, AlertTriangle, ChevronRight,
+  BadgeCheck, AlertTriangle, ChevronRight, BookOpen,
 } from 'lucide-react';
+import GuideModal from '../../../components/Modals/GuideModal';
+import { TOOL_GUIDES } from '../../../config/toolGuides';
 
 // ── Badges ────────────────────────────────────────────────────────────────────
 
@@ -42,6 +44,7 @@ export default function TissViewer() {
   const [selectedGuia, setSelectedGuia] = useState(null);
   const [xmlDrawerOpen, setXmlDrawerOpen] = useState(false);
   const [fileName,     setFileName]     = useState('');
+  const [isGuideOpen,  setIsGuideOpen]  = useState(false);
 
   const handleFile = useCallback(async (file) => {
     if (!file) return;
@@ -93,6 +96,16 @@ export default function TissViewer() {
             <div className="flex items-center gap-2.5 mb-1">
               <FileCode2 size={20} className="text-blue-500" />
               <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">Visualizador TISS</h1>
+              <button
+                onClick={() => setIsGuideOpen(true)}
+                className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
+                           text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400
+                           hover:bg-slate-100 dark:hover:bg-slate-800
+                           border border-slate-200 dark:border-slate-700/60 transition-all duration-200"
+              >
+                <BookOpen size={13} />
+                Como Usar
+              </button>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Faça upload de um XML TISS para visualizar os dados humanizados das guias.
@@ -100,6 +113,9 @@ export default function TissViewer() {
           </div>
           <Dropzone onFile={handleFile} />
         </div>
+        {isGuideOpen && (
+          <GuideModal guide={TOOL_GUIDES['tiss-viewer']} onClose={() => setIsGuideOpen(false)} />
+        )}
       </DashboardLayout>
     );
   }

@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ChevronDown, GitBranch, Loader2, CheckSquare, Square,
-  Code2, FileJson, Zap, AlertCircle,
+  Code2, FileJson, Zap, AlertCircle, BookOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '../../../components/DashboardLayout';
+import GuideModal from '../../../components/Modals/GuideModal';
+import { TOOL_GUIDES } from '../../../config/toolGuides';
 import api from '../../../services/api';
 import GenTreeNode from './GenTreeNode';
 import OutputModal from './OutputModal';
@@ -64,6 +66,7 @@ export default function TissGenerator() {
   const [entryError,        setEntryError]        = useState(null);
   const [generating,        setGenerating]        = useState(false);
   const [modal,             setModal]             = useState(null);
+  const [isGuideOpen,       setIsGuideOpen]       = useState(false);
 
   const seenOptionalsRef = useRef(new Set());
 
@@ -190,10 +193,19 @@ export default function TissGenerator() {
         {/* ── Left sidebar ──────────────────────────────────────── */}
         <div className="w-60 shrink-0 border-r border-slate-200 dark:border-slate-800/60 bg-white dark:bg-slate-950/70 flex flex-col">
 
-          <div className="shrink-0 px-4 py-3 border-b border-slate-200 dark:border-slate-800/60">
+          <div className="shrink-0 px-4 py-3 border-b border-slate-200 dark:border-slate-800/60 flex items-center justify-between">
             <span className="text-[9px] font-mono font-bold text-slate-500 dark:text-slate-600 uppercase tracking-[0.15em]">
               Gerador de Amostras
             </span>
+            <button
+              onClick={() => setIsGuideOpen(true)}
+              title="Como Usar"
+              className="p-1 rounded-lg text-slate-400 dark:text-slate-600
+                         hover:text-blue-500 dark:hover:text-blue-400
+                         hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
+            >
+              <BookOpen size={12} />
+            </button>
           </div>
 
           <div className="flex flex-col gap-5 p-4 flex-1 overflow-y-auto">
@@ -423,6 +435,10 @@ export default function TissGenerator() {
           initialTab={modal.tab}
           onClose={() => setModal(null)}
         />
+      )}
+
+      {isGuideOpen && (
+        <GuideModal guide={TOOL_GUIDES['xml-generator']} onClose={() => setIsGuideOpen(false)} />
       )}
     </DashboardLayout>
   );

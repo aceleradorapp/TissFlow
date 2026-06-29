@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import DashboardLayout from '../../../components/DashboardLayout';
+import GuideModal      from '../../../components/Modals/GuideModal';
+import { TOOL_GUIDES } from '../../../config/toolGuides';
 import api             from '../../../services/api';
 import VersionSelector from './VersionSelector';
 import TreePanel       from './TreePanel';
@@ -19,6 +21,7 @@ export default function SwaggerVisual() {
   const [loadingRoot,       setLoadingRoot]       = useState(false);
   const [isSearching,       setIsSearching]       = useState(false);
   const [searchResults,     setSearchResults]     = useState(null); // null = no search, [] = none found
+  const [isGuideOpen,       setIsGuideOpen]       = useState(false);
 
   // ── Versions on mount ────────────────────────────────────────────
   useEffect(() => {
@@ -163,6 +166,7 @@ export default function SwaggerVisual() {
             versionId={selectedVersionId}
             onVersionChange={(v) => setSelectedVersionId(v)}
             loadingVersions={loadingVersions}
+            onGuideOpen={() => setIsGuideOpen(true)}
           />
         </div>
 
@@ -188,6 +192,10 @@ export default function SwaggerVisual() {
         </div>
 
       </div>
+
+      {isGuideOpen && (
+        <GuideModal guide={TOOL_GUIDES['swagger-visual']} onClose={() => setIsGuideOpen(false)} />
+      )}
     </DashboardLayout>
   );
 }

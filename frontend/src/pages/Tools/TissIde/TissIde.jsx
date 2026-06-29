@@ -1,7 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Download, Save, RefreshCw, Loader2, Code2, AlertCircle } from 'lucide-react';
+import { Download, Save, RefreshCw, Loader2, Code2, AlertCircle, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '../../../components/DashboardLayout';
+import GuideModal from '../../../components/Modals/GuideModal';
+import { TOOL_GUIDES } from '../../../config/toolGuides';
 import api from '../../../services/api';
 import IdeDropzone from './IdeDropzone';
 import TreePane from './TreePane';
@@ -37,6 +39,7 @@ export default function TissIde() {
   const [isSaving,     setIsSaving]     = useState(false);
   const [isRebuilding, setIsRebuilding] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [isGuideOpen,  setIsGuideOpen]  = useState(false);
   const [isDark,       setIsDark]       = useState(
     () => document.documentElement.classList.contains('dark')
   );
@@ -233,6 +236,16 @@ export default function TissIde() {
             <div className="flex items-center gap-2.5 mb-1">
               <Code2 size={20} className="text-blue-500" />
               <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">IDE Interativa TISS</h1>
+              <button
+                onClick={() => setIsGuideOpen(true)}
+                className="ml-2 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
+                           text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400
+                           hover:bg-slate-100 dark:hover:bg-slate-800
+                           border border-slate-200 dark:border-slate-700/60 transition-all duration-200"
+              >
+                <BookOpen size={13} />
+                Como Usar
+              </button>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">
               Edite, valide e corrija XMLs TISS com validação em tempo real via XSD oficial da ANS.
@@ -240,6 +253,9 @@ export default function TissIde() {
           </div>
           <IdeDropzone onFile={handleFile} />
         </div>
+        {isGuideOpen && (
+          <GuideModal guide={TOOL_GUIDES['tiss-ide']} onClose={() => setIsGuideOpen(false)} />
+        )}
       </DashboardLayout>
     );
   }

@@ -2,10 +2,12 @@ import { useState, useEffect, useMemo, Fragment } from 'react';
 import {
   GitCompare, Loader2, Plus, Minus, RefreshCw,
   AlertCircle, Search, X, ChevronDown, ArrowRight,
-  Tag, Code2, FileDown, Lock, Zap,
+  Tag, Code2, FileDown, Lock, Zap, BookOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '../../../components/DashboardLayout';
+import GuideModal from '../../../components/Modals/GuideModal';
+import { TOOL_GUIDES } from '../../../config/toolGuides';
 import api from '../../../services/api';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -568,6 +570,7 @@ export default function VersionComparator() {
   const [exportingPdf,    setExportingPdf]    = useState(false);
   const [userProfile,     setUserProfile]     = useState(null);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [isGuideOpen,      setIsGuideOpen]      = useState(false);
 
   // ── Load user profile for plan check ──────────────────────────────────────
   useEffect(() => {
@@ -1026,6 +1029,16 @@ export default function VersionComparator() {
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50">
               Comparador de Versões TISS
             </h1>
+            <button
+              onClick={() => setIsGuideOpen(true)}
+              className="ml-1 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
+                         text-slate-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400
+                         hover:bg-slate-100 dark:hover:bg-slate-800
+                         border border-slate-200 dark:border-slate-700/60 transition-all duration-200"
+            >
+              <BookOpen size={13} />
+              Como Usar
+            </button>
           </div>
           <p className="text-slate-500 text-sm mt-1.5">
             Selecione duas versões para visualizar todos os campos adicionados, removidos
@@ -1074,6 +1087,11 @@ export default function VersionComparator() {
       {/* Upgrade Modal */}
       {showUpgradeModal && (
         <UpgradeModal onClose={() => setShowUpgradeModal(false)} />
+      )}
+
+      {/* Guide Modal */}
+      {isGuideOpen && (
+        <GuideModal guide={TOOL_GUIDES['version-comparator']} onClose={() => setIsGuideOpen(false)} />
       )}
     </DashboardLayout>
   );
