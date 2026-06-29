@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { Op } = require('sequelize');
-const { User, Role, Plan, Tool } = require('../../models');
+const { User, Role, Plan, Tool, SystemSetting } = require('../../models');
 
 const signToken = (user) =>
   jwt.sign(
@@ -43,8 +43,10 @@ exports.register = async (req, res) => {
     // Atribui o plano Free Trial ao novo usuário com 30 dias de validade
     const trialPlan = await Plan.findOne({ where: { name: 'Free Trial' } });
 
+    const trialSetting = await SystemSetting.findOne({ where: { key: 'trial_duration_days' } });
+    const trialDays = parseInt(trialSetting?.value, 10) || 30;
     const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + 30);
+    trialEndsAt.setDate(trialEndsAt.getDate() + trialDays);
 
     // O hook beforeCreate do Model hasheia a senha automaticamente
     const user = await User.create({

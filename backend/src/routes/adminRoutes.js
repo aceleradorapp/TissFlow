@@ -11,6 +11,7 @@ const {
 const { getStats }                      = require('../controllers/dashboardController');
 const { uploadXsd }                     = require('../controllers/tissController');
 const { listVersions, generateDiff }    = require('../controllers/versionDiffController');
+const { updateAdminSettings }           = require('../controllers/settingsController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const roleMiddleware = require('../middlewares/roleMiddleware');
 
@@ -54,5 +55,8 @@ router.post('/tiss/upload',              ...guard, xsdUpload.array('xsd_files', 
 // ─── Version Diff Generator ───────────────────────────────────────────────────
 router.get('/versions',                  ...guard, listVersions);
 router.post('/versions/generate-diff',   ...guard, generateDiff);
+
+// ─── System Settings ──────────────────────────────────────────────────────────
+router.put('/settings',                  ...guard, updateAdminSettings);
 
 module.exports = router;

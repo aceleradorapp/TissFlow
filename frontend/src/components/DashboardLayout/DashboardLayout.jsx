@@ -4,8 +4,9 @@ import {
   LayoutDashboard, User, LogOut,
   ChevronLeft, ChevronRight,
   Menu, X, Sun, Moon, Stethoscope,
-  Users, Package, ScrollText, FileCode2, Network, Sparkles, Wrench, ScanSearch, Code2, GitCompare,
+  Users, Package, ScrollText, FileCode2, Network, Sparkles, Wrench, ScanSearch, Code2, GitCompare, Settings,
 } from 'lucide-react';
+import { useSettings } from '../../contexts/SettingsContext';
 
 const USER_NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -19,6 +20,7 @@ const ADMIN_NAV = [
   { to: '/admin/features',               icon: Wrench,          label: 'Ferramentas'     },
   { to: '/admin/tiss/ingestion',         icon: FileCode2,       label: 'Módulos XSD'     },
   { to: '/admin/tools/version-diff',     icon: GitCompare,      label: 'Diff de Versões' },
+  { to: '/admin/settings',              icon: Settings,         label: 'Configurações'   },
 ];
 
 const TOOLS_NAV = [
@@ -32,6 +34,7 @@ const TOOLS_NAV = [
 export default function DashboardLayout({ children }) {
   const navigate  = useNavigate();
   const location  = useLocation();
+  const { systemName } = useSettings();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed,  setCollapsed]  = useState(false);
   const [isDark,     setIsDark]     = useState(
@@ -123,7 +126,7 @@ export default function DashboardLayout({ children }) {
           <div className="flex items-center gap-2.5 overflow-hidden">
             <Stethoscope className="text-blue-600 dark:text-blue-500 shrink-0" size={22} />
             <span className={['font-bold text-slate-900 dark:text-slate-50 whitespace-nowrap', collapsed ? 'lg:hidden' : ''].join(' ')}>
-              TISSflow
+              {systemName}
             </span>
           </div>
           <button onClick={() => setCollapsed((c) => !c)}
@@ -205,7 +208,7 @@ export default function DashboardLayout({ children }) {
           </button>
           <div className="flex items-center gap-2">
             <Stethoscope className="text-blue-600 dark:text-blue-500" size={20} />
-            <span className="font-bold text-slate-900 dark:text-slate-50">TISSflow</span>
+            <span className="font-bold text-slate-900 dark:text-slate-50">{systemName}</span>
           </div>
         </header>
         <main className="flex-1 overflow-y-auto p-6">{children}</main>

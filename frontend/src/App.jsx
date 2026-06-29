@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'sonner';
+import { SettingsProvider } from './contexts/SettingsContext';
 import Home           from './pages/Home';
 import Login          from './pages/Login';
 import Register       from './pages/Register';
@@ -17,12 +18,14 @@ import TissGenerator    from './pages/Tools/TissGenerator';
 import TissViewer       from './pages/Tools/TissViewer';
 import TissIde            from './pages/Tools/TissIde';
 import VersionComparator  from './pages/Tools/VersionComparator';
+import SystemSettings     from './pages/Admin/SystemSettings/SystemSettings';
 import PrivateRoute   from './components/PrivateRoute';
 import AdminRoute     from './components/AdminRoute';
 
 export default function App() {
   return (
     <BrowserRouter>
+    <SettingsProvider>
       <Toaster position="top-right" richColors />
       <Routes>
         {/* Públicas */}
@@ -56,6 +59,9 @@ export default function App() {
         <Route path="/admin/tools/version-diff" element={
           <AdminRoute><VersionDiffGenerator /></AdminRoute>
         } />
+        <Route path="/admin/settings" element={
+          <AdminRoute><SystemSettings /></AdminRoute>
+        } />
 
         {/* Ferramentas */}
         <Route path="/tools/swagger" element={
@@ -74,6 +80,7 @@ export default function App() {
           <PrivateRoute><VersionComparator /></PrivateRoute>
         } />
       </Routes>
+    </SettingsProvider>
     </BrowserRouter>
   );
 }
