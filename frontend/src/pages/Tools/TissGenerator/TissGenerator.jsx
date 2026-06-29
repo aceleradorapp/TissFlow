@@ -199,12 +199,13 @@ export default function TissGenerator() {
             </span>
             <button
               onClick={() => setIsGuideOpen(true)}
-              title="Como Usar"
-              className="p-1 rounded-lg text-slate-400 dark:text-slate-600
-                         hover:text-blue-500 dark:hover:text-blue-400
-                         hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold
+                         bg-blue-50 dark:bg-blue-600/10 text-blue-600 dark:text-blue-400
+                         border border-blue-200 dark:border-blue-500/30
+                         hover:bg-blue-100 dark:hover:bg-blue-600/20 transition-all duration-200"
             >
-              <BookOpen size={12} />
+              <BookOpen size={11} />
+              Como Usar
             </button>
           </div>
 
