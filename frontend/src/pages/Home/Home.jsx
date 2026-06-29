@@ -5,6 +5,7 @@ import {
   Code2, Terminal, Layers, Cpu,
   ShieldCheck, Activity, BarChart3,
 } from 'lucide-react';
+import api from '../../services/api';
 
 // ─── Grid pattern (inline style) ─────────────────────────────────────────────
 
@@ -140,35 +141,12 @@ const PRESTADOR_FEATURES = [
   },
 ];
 
-const PLANS = [
-  {
-    id: 'bronze',
-    name: 'Bronze',
-    price: '49,90',
-    description: 'Módulo essencial para validação em clínicas e consultórios.',
-    features: ['Até 500 guias / mês', 'Validador TISS básico', 'Dashboard simplificado', 'Suporte por e-mail'],
-    featured: false,
-    cta: 'Começar no Bronze',
-  },
-  {
-    id: 'prata',
-    name: 'Prata',
-    price: '99,90',
-    description: 'Ecossistema completo para devs e equipes de faturamento.',
-    features: ['Até 2.000 guias / mês', 'Validador + Comparador TISS', 'API REST + SDK', 'Documentação interativa', 'Suporte prioritário'],
-    featured: true,
-    cta: 'Começar no Prata',
-  },
-  {
-    id: 'ouro',
-    name: 'Ouro',
-    price: '199,90',
-    description: 'Infraestrutura TISS enterprise para operadoras e redes.',
-    features: ['Guias ilimitadas', 'Todas as ferramentas TISS', 'Schemas TS / Go / Python', 'SLA 99.9%', 'Suporte 24/7 dedicado', 'Onboarding exclusivo'],
-    featured: false,
-    cta: 'Começar no Ouro',
-  },
-];
+// Static marketing copy per plan name (price and tools come from the API)
+const PLAN_DESCRIPTIONS = {
+  Bronze: 'Módulo essencial para validação em clínicas e consultórios.',
+  Prata:  'Ecossistema completo para devs e equipes de faturamento.',
+  Ouro:   'Infraestrutura TISS enterprise para operadoras e redes.',
+};
 
 const STATS = [
   { value: '3.05', label: 'TISS / ANS' },
@@ -253,6 +231,10 @@ function CodePreviewCard() {
 // ─── PlanContent ──────────────────────────────────────────────────────────────
 
 function PlanContent({ plan, featured = false }) {
+  const formattedPrice = Number(plan.price).toFixed(2).replace('.', ',');
+  const description    = PLAN_DESCRIPTIONS[plan.name] ?? 'Ferramentas avançadas para o ecossistema TISS.';
+  const tools          = plan.tools ?? [];
+
   return (
     <div className="flex flex-col h-full gap-5">
       <div>
@@ -264,28 +246,30 @@ function PlanContent({ plan, featured = false }) {
           {plan.name}
         </h3>
         <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">
-          {plan.description}
+          {description}
         </p>
       </div>
 
       <div className="flex items-end gap-1">
         <span className="text-sm text-slate-400 dark:text-slate-500 pb-0.5">R$</span>
         <span className="text-4xl font-extrabold text-slate-900 dark:text-slate-50 leading-none">
-          {plan.price}
+          {formattedPrice}
         </span>
         <span className="text-sm text-slate-400 dark:text-slate-500 pb-0.5">/mês</span>
       </div>
 
       <ul className="flex flex-col gap-2.5 flex-1">
-        {plan.features.map((feat) => (
-          <li key={feat} className="flex items-start gap-2.5">
+        {tools.length > 0 ? tools.map((tool) => (
+          <li key={tool.id} className="flex items-start gap-2.5">
             <Check
               size={15}
               className={`shrink-0 mt-0.5 ${featured ? 'text-emerald-500' : 'text-slate-400 dark:text-slate-600'}`}
             />
-            <span className="text-sm text-slate-600 dark:text-slate-400 leading-snug">{feat}</span>
+            <span className="text-sm text-slate-600 dark:text-slate-400 leading-snug">{tool.name}</span>
           </li>
-        ))}
+        )) : (
+          <li className="text-xs text-slate-400 italic">Ferramentas a configurar pelo administrador.</li>
+        )}
       </ul>
 
       <Link
@@ -297,7 +281,7 @@ function PlanContent({ plan, featured = false }) {
             : 'border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-500 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400'
         }`}
       >
-        {plan.cta}
+        Começar no {plan.name}
       </Link>
     </div>
   );
@@ -306,9 +290,18 @@ function PlanContent({ plan, featured = false }) {
 // ─── Home ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [isDark,     setIsDark]     = useState(() => document.documentElement.classList.contains('dark'));
-  const [mobileMenu, setMobileMenu] = useState(false);
-  const [activeTab,  setActiveTab]  = useState('dev');
+  const [isDark,      setIsDark]      = useState(() => document.documentElement.classList.contains('dark'));
+  const [mobileMenu,  setMobileMenu]  = useState(false);
+  const [activeTab,   setActiveTab]   = useState('dev');
+  const [plans,       setPlans]       = useState([]);
+  const [loadingPlans, setLoadingPlans] = useState(true);
+
+  useEffect(() => {
+    api.get('/public/plans')
+      .then(({ data }) => setPlans(data.plans ?? []))
+      .catch(() => {})
+      .finally(() => setLoadingPlans(false));
+  }, []);
 
   function toggleDark() {
     document.documentElement.classList.toggle('dark');
@@ -630,40 +623,53 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:items-stretch">
-            {PLANS.map((plan) =>
-              plan.featured ? (
-                <div key={plan.id} className="relative md:-mt-6">
-                  <span className="absolute -top-4 left-1/2 -translate-x-1/2 z-10
-                                   px-5 py-1.5 rounded-full text-xs font-bold text-white whitespace-nowrap
-                                   bg-gradient-to-r from-blue-600 to-emerald-500
-                                   shadow-md shadow-blue-500/30">
-                    ⭐ Mais Popular
-                  </span>
-                  {/* Gradient border + neon glow in dark */}
-                  <div className="p-px rounded-2xl h-full
-                                  bg-gradient-to-b from-blue-500 via-blue-400 to-emerald-500
-                                  shadow-xl shadow-blue-500/20
-                                  dark:shadow-[0_0_40px_rgba(59,130,246,0.4),0_0_80px_rgba(16,185,129,0.12)]">
-                    <div className="bg-white dark:bg-slate-900 rounded-[15px] p-8 h-full">
-                      <PlanContent plan={plan} featured />
+          {loadingPlans ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-2xl p-8 h-72 animate-pulse
+                             bg-slate-100 dark:bg-slate-800/40
+                             border border-slate-200/60 dark:border-slate-700/40"
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:items-stretch">
+              {plans.map((plan, idx) => {
+                const featured = idx === 1;
+                return featured ? (
+                  <div key={plan.id} className="relative md:-mt-6">
+                    <span className="absolute -top-4 left-1/2 -translate-x-1/2 z-10
+                                     px-5 py-1.5 rounded-full text-xs font-bold text-white whitespace-nowrap
+                                     bg-gradient-to-r from-blue-600 to-emerald-500
+                                     shadow-md shadow-blue-500/30">
+                      ⭐ Mais Popular
+                    </span>
+                    <div className="p-px rounded-2xl h-full
+                                    bg-gradient-to-b from-blue-500 via-blue-400 to-emerald-500
+                                    shadow-xl shadow-blue-500/20
+                                    dark:shadow-[0_0_40px_rgba(59,130,246,0.4),0_0_80px_rgba(16,185,129,0.12)]">
+                      <div className="bg-white dark:bg-slate-900 rounded-[15px] p-8 h-full">
+                        <PlanContent plan={plan} featured />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div
-                  key={plan.id}
-                  className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl
-                             border border-slate-200/60 dark:border-slate-800/60
-                             rounded-2xl p-8 flex flex-col
-                             hover:shadow-lg hover:scale-[1.01]
-                             transition-all duration-300"
-                >
-                  <PlanContent plan={plan} />
-                </div>
-              )
-            )}
-          </div>
+                ) : (
+                  <div
+                    key={plan.id}
+                    className="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl
+                               border border-slate-200/60 dark:border-slate-800/60
+                               rounded-2xl p-8 flex flex-col
+                               hover:shadow-lg hover:scale-[1.01]
+                               transition-all duration-300"
+                  >
+                    <PlanContent plan={plan} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 

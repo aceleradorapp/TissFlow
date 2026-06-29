@@ -4,6 +4,7 @@ const cors = require('cors');
 
 const authRoutes       = require('./routes/authRoutes');
 const adminRoutes      = require('./routes/adminRoutes');
+const publicRoutes     = require('./routes/publicRoutes');
 const swaggerRoutes    = require('./routes/tools/swaggerRoutes');
 const generatorRoutes  = require('./routes/tools/generatorRoutes');
 const viewerRoutes     = require('./routes/tools/viewerRoutes');
@@ -20,6 +21,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.use('/api/public',        publicRoutes);
 app.use('/api/auth',          authRoutes);
 app.use('/api/admin',         adminRoutes);
 app.use('/api/tools/swagger',    swaggerRoutes);
