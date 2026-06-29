@@ -14,8 +14,8 @@ export default function BatchNav({ guias, selected, onSelect }) {
   if (!guias?.length) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3 px-4 text-center py-10">
-        <FileText size={22} className="text-slate-300 dark:text-slate-700" />
-        <p className="text-xs text-slate-400 dark:text-slate-600">Nenhuma guia encontrada no lote.</p>
+        <FileText size={22} className="text-slate-300 dark:text-slate-500" />
+        <p className="text-xs text-slate-400 dark:text-slate-400">Nenhuma guia encontrada no lote.</p>
       </div>
     );
   }
@@ -24,7 +24,7 @@ export default function BatchNav({ guias, selected, onSelect }) {
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="shrink-0 px-4 py-3 border-b border-slate-200 dark:border-slate-800/60">
-        <span className="text-[9px] font-mono font-bold text-slate-400 dark:text-slate-600 uppercase tracking-[0.15em]">
+        <span className="text-[9px] font-mono font-bold text-slate-400 dark:text-slate-400 uppercase tracking-[0.15em]">
           Lote · {guias.length} guia{guias.length !== 1 ? 's' : ''}
         </span>
       </div>
@@ -61,7 +61,7 @@ export default function BatchNav({ guias, selected, onSelect }) {
                     Nº {g.numeroGuia}
                   </p>
                   {g.beneficiario?.nome && (
-                    <p className="text-[10px] text-slate-400 dark:text-slate-600 truncate mt-0.5">
+                    <p className="text-[10px] text-slate-400 dark:text-slate-400 truncate mt-0.5">
                       {g.beneficiario.nome}
                     </p>
                   )}

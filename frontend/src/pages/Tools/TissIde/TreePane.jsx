@@ -143,7 +143,7 @@ function countErrors(node) {
 export default function TreePane({ tree, onValueChange, onToggleEnabled, onInsert }) {
   if (!tree) {
     return (
-      <div className="flex items-center justify-center h-full text-sm text-slate-400 dark:text-slate-600">
+      <div className="flex items-center justify-center h-full text-sm text-slate-400 dark:text-slate-400">
         Nenhum XML carregado.
       </div>
     );

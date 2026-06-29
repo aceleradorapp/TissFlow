@@ -85,12 +85,12 @@ export default function GenTreeNode({
         {/* Expand chevron / loader */}
         <span className="shrink-0 w-4 flex items-center justify-center">
           {state.isLoading ? (
-            <Loader2 size={10} className="text-slate-400 dark:text-slate-600 animate-spin" />
+            <Loader2 size={10} className="text-slate-400 dark:text-slate-400 animate-spin" />
           ) : isExpandable ? (
             <ChevronRight
               size={11}
               className={[
-                'text-slate-400 dark:text-slate-600 transition-transform duration-200',
+                'text-slate-400 dark:text-slate-400 transition-transform duration-200',
                 state.isOpen ? 'rotate-90' : '',
               ].join(' ')}
             />
@@ -112,7 +112,7 @@ export default function GenTreeNode({
             ? <FolderOpen size={13} className="shrink-0 text-yellow-500/70" />
             : <Folder     size={13} className="shrink-0 text-yellow-500/70" />
         ) : (
-          <Tag size={12} className={isRequired ? 'shrink-0 text-blue-500/60 dark:text-blue-500/50' : 'shrink-0 text-slate-400 dark:text-slate-600'} />
+          <Tag size={12} className={isRequired ? 'shrink-0 text-blue-500/60 dark:text-blue-500/50' : 'shrink-0 text-slate-400 dark:text-slate-500'} />
         )}
 
         {/* Node name */}
@@ -122,7 +122,7 @@ export default function GenTreeNode({
             ? 'text-blue-600 dark:text-blue-300'
             : isChecked
               ? 'text-slate-700 dark:text-slate-200'
-              : 'text-slate-400 dark:text-slate-500',
+              : 'text-slate-500 dark:text-slate-400',
         ].join(' ')}>
           {node.name}
         </span>

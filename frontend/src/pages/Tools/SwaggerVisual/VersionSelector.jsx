@@ -39,7 +39,7 @@ export default function VersionSelector({ versions, versionId, onVersionChange, 
         <div>
           <label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5 block">
             Versão TISS
-            {loadingVersions && <Loader2 size={9} className="animate-spin text-slate-400 dark:text-slate-600" />}
+            {loadingVersions && <Loader2 size={9} className="animate-spin text-slate-400 dark:text-slate-400" />}
           </label>
           <div className="relative">
             <select
@@ -61,17 +61,17 @@ export default function VersionSelector({ versions, versionId, onVersionChange, 
 
         {/* Legend */}
         <div className="flex flex-col gap-2">
-          <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider">Legenda</span>
+          <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Legenda</span>
           <div className="flex flex-col gap-1.5">
-            <span className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-600">
+            <span className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400">
               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
               Campo obrigatório
             </span>
-            <span className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-600">
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-700 shrink-0" />
+            <span className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-600 shrink-0" />
               Campo opcional
             </span>
-            <span className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-600">
+            <span className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400">
               <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 shrink-0" />
               Resultado da busca
             </span>
@@ -79,9 +79,9 @@ export default function VersionSelector({ versions, versionId, onVersionChange, 
         </div>
 
         {/* Usage hint */}
-        <p className="text-[10px] text-slate-400 dark:text-slate-700 leading-relaxed">
+        <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
           Selecione uma versão para navegar pela estrutura hierárquica do TISS a partir do nó raiz
-          <span className="font-mono text-slate-500 dark:text-slate-600"> mensagemTISS</span>.
+          <span className="font-mono text-slate-500 dark:text-slate-400"> mensagemTISS</span>.
         </p>
 
       </div>

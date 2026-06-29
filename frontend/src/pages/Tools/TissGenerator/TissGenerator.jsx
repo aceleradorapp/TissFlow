@@ -320,7 +320,7 @@ export default function TissGenerator() {
           {/* Tree header */}
           <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 border-b border-slate-200 dark:border-slate-800/60 bg-white/60 dark:bg-slate-900/30">
             <GitBranch size={11} className="text-slate-700 shrink-0" />
-            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-600 truncate">
+            <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
               {rootNode
                 ? rootNode.name
                 : selectedVersionId && selectedType
@@ -362,15 +362,15 @@ export default function TissGenerator() {
             {!loadingEntry && !entryError && !rootNode && (
               <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
                 <div className="w-14 h-14 rounded-2xl bg-slate-200 dark:bg-slate-800/40 border border-slate-300 dark:border-slate-800/60 flex items-center justify-center">
-                  <GitBranch size={22} className="text-slate-400 dark:text-slate-700" />
+                  <GitBranch size={22} className="text-slate-400 dark:text-slate-500" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-600">
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                     {!selectedVersionId
                       ? 'Selecione uma versão TISS'
                       : 'Selecione o tipo de transação'}
                   </p>
-                  <p className="text-xs text-slate-400 dark:text-slate-700 mt-1">
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                     {!selectedVersionId
                       ? 'Escolha a versão no painel lateral'
                       : 'A árvore de campos será carregada automaticamente'}
@@ -395,7 +395,7 @@ export default function TissGenerator() {
 
           {/* Action bar */}
           <div className="shrink-0 flex items-center gap-3 px-4 py-3 border-t border-slate-200 dark:border-slate-800/60 bg-white dark:bg-slate-950/70">
-            <span className="text-[10px] text-slate-500 dark:text-slate-700 mr-auto truncate">
+            <span className="text-[10px] text-slate-500 dark:text-slate-400 mr-auto truncate">
               {canGenerate
                 ? `Gerando ${selectedTypeMeta?.label ?? ''} — dados fictícios contextualizados`
                 : 'Configure versão e tipo de transação para habilitar'}

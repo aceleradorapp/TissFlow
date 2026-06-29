@@ -52,12 +52,12 @@ export default function TreeNode({
         {/* Expand arrow / loader */}
         <span className="shrink-0 w-4 flex items-center justify-center">
           {state.isLoading ? (
-            <Loader2 size={10} className="text-slate-400 dark:text-slate-600 animate-spin" />
+            <Loader2 size={10} className="text-slate-400 dark:text-slate-400 animate-spin" />
           ) : isExpandable ? (
             <ChevronRight
               size={11}
               className={[
-                'text-slate-400 dark:text-slate-600 transition-transform duration-200',
+                'text-slate-400 dark:text-slate-400 transition-transform duration-200',
                 state.isOpen ? 'rotate-90' : '',
               ].join(' ')}
             />
@@ -70,7 +70,7 @@ export default function TreeNode({
             ? <FolderOpen size={13} className="shrink-0 text-yellow-500/70" />
             : <Folder     size={13} className="shrink-0 text-yellow-500/70" />
         ) : (
-          <Tag size={12} className="shrink-0 text-slate-400 dark:text-slate-600" />
+          <Tag size={12} className="shrink-0 text-slate-400 dark:text-slate-500" />
         )}
 
         {/* Name */}
@@ -79,7 +79,7 @@ export default function TreeNode({
           isHighlighted ? 'text-yellow-600 dark:text-yellow-300 font-bold'              :
           isSelected    ? 'text-blue-600 dark:text-blue-300 font-semibold'              :
           isRequired    ? 'text-blue-600 dark:text-blue-400'                            :
-                          'text-slate-600 dark:text-slate-500 group-hover:text-slate-800 dark:group-hover:text-slate-300',
+                          'text-slate-600 dark:text-slate-300 group-hover:text-slate-800 dark:group-hover:text-slate-100',
         ].join(' ')}>
           {node.name}
         </span>
@@ -91,7 +91,7 @@ export default function TreeNode({
 
         {/* Type hint on hover (leaf nodes only) */}
         {node.isLeaf && node.type && (
-          <span className="shrink-0 text-[9px] font-mono text-slate-400 dark:text-slate-700
+          <span className="shrink-0 text-[9px] font-mono text-slate-400 dark:text-slate-500
                            opacity-0 group-hover:opacity-100 transition-opacity duration-150">
             {node.type.replace(/^(__inline__|ct_|st_)/, '')}
           </span>

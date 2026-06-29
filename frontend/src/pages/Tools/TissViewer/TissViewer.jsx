@@ -155,7 +155,7 @@ export default function TissViewer() {
           <span className="text-xs font-mono text-slate-500 dark:text-slate-500 truncate max-w-[200px]">
             {fileName}
           </span>
-          <ChevronRight size={12} className="text-slate-300 dark:text-slate-700 shrink-0" />
+          <ChevronRight size={12} className="text-slate-300 dark:text-slate-600 shrink-0" />
           <VersionBadge versao={result.versao} />
           <TxBadge label={result.tipoTransacaoLabel} />
 
@@ -165,7 +165,7 @@ export default function TissViewer() {
             </span>
           )}
           {result.dataRegistro && (
-            <span className="text-[11px] text-slate-400 dark:text-slate-600 hidden sm:inline">
+            <span className="text-[11px] text-slate-400 dark:text-slate-400 hidden sm:inline">
               {result.dataRegistro}
             </span>
           )}
@@ -221,7 +221,7 @@ export default function TissViewer() {
             {selectedGuia
               ? <GuiaViewer guia={selectedGuia} warnings={result.warnings} />
               : (
-                <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-600 text-sm">
+                <div className="flex items-center justify-center h-full text-slate-400 dark:text-slate-400 text-sm">
                   Selecione uma guia no painel lateral.
                 </div>
               )

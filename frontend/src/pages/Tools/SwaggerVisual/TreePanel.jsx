@@ -30,8 +30,8 @@ export default function TreePanel({
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-3">
-        <Loader2 size={26} className="text-slate-400 dark:text-slate-600 animate-spin" />
-        <span className="text-xs text-slate-500 dark:text-slate-600">Carregando estrutura...</span>
+        <Loader2 size={26} className="text-slate-400 dark:text-slate-400 animate-spin" />
+        <span className="text-xs text-slate-500 dark:text-slate-400">Carregando estrutura...</span>
       </div>
     );
   }
@@ -40,11 +40,11 @@ export default function TreePanel({
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-8">
         <div className="w-14 h-14 rounded-2xl bg-slate-200 dark:bg-slate-800/50 flex items-center justify-center">
-          <GitBranch size={22} className="text-slate-400 dark:text-slate-700" />
+          <GitBranch size={22} className="text-slate-400 dark:text-slate-500" />
         </div>
         <div>
-          <p className="text-sm font-medium text-slate-500 dark:text-slate-600">Nenhuma estrutura carregada</p>
-          <p className="text-xs text-slate-400 dark:text-slate-700 mt-1">Selecione uma versão no painel lateral</p>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Nenhuma estrutura carregada</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Selecione uma versão no painel lateral</p>
         </div>
       </div>
     );
@@ -56,7 +56,7 @@ export default function TreePanel({
       {/* ── Search bar ─────────────────────────────────────────── */}
       <div className="shrink-0 px-3 pt-3 pb-2 border-b border-slate-200 dark:border-slate-800/60">
         <div className="relative">
-          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 pointer-events-none" />
+          <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-400 pointer-events-none" />
           <input
             type="text"
             value={query}
@@ -78,7 +78,7 @@ export default function TreePanel({
           {!isSearching && query && (
             <button
               onClick={handleClear}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
             >
               <X size={11} />
             </button>
@@ -86,7 +86,7 @@ export default function TreePanel({
         </div>
 
         {resultCount !== null && (
-          <p className="text-[10px] text-slate-500 dark:text-slate-600 mt-1.5 pl-0.5">
+          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 pl-0.5">
             {resultCount === 0
               ? 'Nenhum campo encontrado'
               : `${resultCount} resultado${resultCount !== 1 ? 's' : ''} — exibindo o primeiro`}
@@ -96,11 +96,11 @@ export default function TreePanel({
 
       {/* ── Tree header ────────────────────────────────────────── */}
       <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-slate-200 dark:border-slate-800/40 bg-slate-100/60 dark:bg-slate-900/30">
-        <GitBranch size={11} className="text-slate-400 dark:text-slate-700 shrink-0" />
-        <span className="text-[10px] font-mono text-slate-500 dark:text-slate-600 truncate">
+        <GitBranch size={11} className="text-slate-400 dark:text-slate-500 shrink-0" />
+        <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 truncate">
           {rootNode.name}
         </span>
-        <span className="flex items-center gap-1.5 text-[9px] text-slate-400 dark:text-slate-700 ml-auto">
+        <span className="flex items-center gap-1.5 text-[9px] text-slate-400 dark:text-slate-600 ml-auto">
           <MousePointerClick size={9} /> Clique para inspecionar
         </span>
       </div>

@@ -92,7 +92,7 @@ function SectionLabel({ text, mt = false }) {
 
 function ProceduresTable({ rows, emptyText = 'Nenhum registro encontrado.' }) {
   if (!rows?.length) {
-    return <p className="text-xs text-slate-400 dark:text-slate-600 py-2 italic">{emptyText}</p>;
+    return <p className="text-xs text-slate-400 dark:text-slate-400 py-2 italic">{emptyText}</p>;
   }
   const hasDate  = rows.some((p) => p.dataExecucao);
   const hasEquipe = rows.some((p) => p.equipe?.length > 0);
@@ -122,12 +122,12 @@ function ProceduresTable({ rows, emptyText = 'Nenhum registro encontrado.' }) {
                 (!hasEquipe || !p.equipe?.length) ? 'last:border-0' : '',
                 i % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-slate-50/50 dark:bg-slate-900/20',
               ].join(' ')}>
-                <td className="px-3 py-2.5 text-slate-400 dark:text-slate-600 tabular-nums">{p.seq}</td>
+                <td className="px-3 py-2.5 text-slate-400 dark:text-slate-500 tabular-nums">{p.seq}</td>
                 {hasDate && (
                   <td className="px-3 py-2.5 text-slate-500 dark:text-slate-400 font-mono">
                     {p.dataExecucao ?? '—'}
                     {(p.horaInicial || p.horaFinal) && (
-                      <span className="block text-[9px] text-slate-400 dark:text-slate-600 mt-0.5">
+                      <span className="block text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">
                         {p.horaInicial ?? ''}{p.horaFinal ? `–${p.horaFinal}` : ''}
                       </span>
                     )}
@@ -136,7 +136,7 @@ function ProceduresTable({ rows, emptyText = 'Nenhum registro encontrado.' }) {
                 <td className="px-3 py-2.5">
                   <span className="font-mono text-slate-600 dark:text-slate-400">{p.tabela || '—'}</span>
                   {p.tabelaLabel && (
-                    <span className="block text-[9px] text-slate-400 dark:text-slate-600 mt-0.5">{p.tabelaLabel}</span>
+                    <span className="block text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">{p.tabelaLabel}</span>
                   )}
                 </td>
                 <td className="px-3 py-2.5 font-mono text-blue-700 dark:text-blue-400 tabular-nums">{p.codigo || '—'}</td>
@@ -151,7 +151,7 @@ function ProceduresTable({ rows, emptyText = 'Nenhum registro encontrado.' }) {
                 <tr className="border-b border-slate-100 dark:border-slate-800/40 last:border-0
                                 bg-slate-50/30 dark:bg-indigo-950/10">
                   <td colSpan={hasDate ? 8 : 7} className="px-3 py-1.5">
-                    <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-600 uppercase tracking-wider mr-2">
+                    <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mr-2">
                       Equipe:
                     </span>
                     {p.equipe.map((e, j) => (
@@ -176,7 +176,7 @@ function ProceduresTable({ rows, emptyText = 'Nenhum registro encontrado.' }) {
 
 function DespesasTable({ rows, emptyText = 'Nenhuma despesa registrada.' }) {
   if (!rows?.length) {
-    return <p className="text-xs text-slate-400 dark:text-slate-600 py-2 italic">{emptyText}</p>;
+    return <p className="text-xs text-slate-400 dark:text-slate-400 py-2 italic">{emptyText}</p>;
   }
   const hasAnvisa = rows.some((d) => d.registroANVISA);
 
@@ -206,11 +206,11 @@ function DespesasTable({ rows, emptyText = 'Nenhuma despesa registrada.' }) {
                 i % 2 === 0 ? 'bg-white dark:bg-transparent' : 'bg-slate-50/50 dark:bg-slate-900/20',
               ].join(' ')}
             >
-              <td className="px-3 py-2.5 text-slate-400 dark:text-slate-600 tabular-nums">{d.seq}</td>
+              <td className="px-3 py-2.5 text-slate-400 dark:text-slate-500 tabular-nums">{d.seq}</td>
               <td className="px-3 py-2.5">
                 <span className="font-mono text-slate-600 dark:text-slate-400">{d.codigoTabela || '—'}</span>
                 {d.tabelaLabel && (
-                  <span className="block text-[9px] text-slate-400 dark:text-slate-600 mt-0.5">{d.tabelaLabel}</span>
+                  <span className="block text-[9px] text-slate-400 dark:text-slate-500 mt-0.5">{d.tabelaLabel}</span>
                 )}
               </td>
               <td className="px-3 py-2.5 font-mono text-blue-700 dark:text-blue-400 tabular-nums">{d.codigoDespesa || '—'}</td>

@@ -60,7 +60,7 @@ export default function Dropzone({ onFile }) {
         <p className="text-sm text-slate-400 dark:text-slate-500">
           ou <span className="text-blue-600 dark:text-blue-400 font-medium underline underline-offset-2">clique para selecionar</span>
         </p>
-        <p className="text-xs text-slate-300 dark:text-slate-600 mt-3">
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
           Suporta padrões TISS 2.x · 3.x · 4.x · Tamanho máx: 10 MB
         </p>
       </div>

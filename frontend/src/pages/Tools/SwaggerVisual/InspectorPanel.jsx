@@ -23,7 +23,7 @@ const CLR = {
   orange: { bg: 'bg-orange-500/10', text: 'text-orange-300', border: 'border-orange-500/20', icon: 'text-orange-400/60' },
   amber:  { bg: 'bg-amber-500/10',  text: 'text-amber-300',  border: 'border-amber-500/20',  icon: 'text-amber-400/60'  },
   green:  { bg: 'bg-green-500/10',  text: 'text-green-300',  border: 'border-green-500/20',  icon: 'text-green-400/60'  },
-  slate:  { bg: 'bg-slate-200/60 dark:bg-slate-800/40', text: 'text-slate-600 dark:text-slate-400', border: 'border-slate-300 dark:border-slate-700/50', icon: 'text-slate-400 dark:text-slate-600' },
+  slate:  { bg: 'bg-slate-200/60 dark:bg-slate-800/40', text: 'text-slate-600 dark:text-slate-400', border: 'border-slate-300 dark:border-slate-700/50', icon: 'text-slate-400 dark:text-slate-500' },
 };
 
 function resolveTypeMeta(field) {
@@ -66,8 +66,8 @@ function PropCard({ icon: Icon, label, accent, children }) {
 function SectionLabel({ icon: Icon, label }) {
   return (
     <div className="flex items-center gap-2 mb-3">
-      <Icon size={11} className="text-slate-400 dark:text-slate-700" />
-      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-600 uppercase tracking-widest">{label}</span>
+      <Icon size={11} className="text-slate-400 dark:text-slate-500" />
+      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">{label}</span>
     </div>
   );
 }
@@ -85,7 +85,7 @@ function CopyButton({ text }) {
       type="button"
       onClick={copy}
       className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium
-                 text-slate-500 dark:text-slate-600 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-black/5 dark:hover:bg-white/5
+                 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-black/5 dark:hover:bg-white/5
                  border border-transparent hover:border-slate-300 dark:hover:border-slate-700/50 transition-all duration-150"
     >
       {copied
@@ -105,11 +105,11 @@ export default function InspectorPanel({ field }) {
       <div className="flex flex-col items-center justify-center h-full gap-4 text-center px-6">
         <div className="w-12 h-12 rounded-xl bg-slate-200 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-800/60
                         flex items-center justify-center">
-          <Info size={18} className="text-slate-400 dark:text-slate-700" />
+          <Info size={18} className="text-slate-400 dark:text-slate-500" />
         </div>
         <div>
-          <p className="text-xs font-medium text-slate-500">Inspetor de Campo</p>
-          <p className="text-[11px] text-slate-400 dark:text-slate-700 mt-1 leading-relaxed">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Inspetor de Campo</p>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 leading-relaxed">
             Clique em um campo<br />na árvore para inspecionar
           </p>
         </div>
@@ -267,7 +267,7 @@ export default function InspectorPanel({ field }) {
                       'px-2.5 py-0.5 text-[10px] font-mono font-semibold rounded transition-all duration-150',
                       codeTab === tab
                         ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
-                        : 'text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400',
+                        : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300',
                     ].join(' ')}
                   >
                     {tab.toUpperCase()}
