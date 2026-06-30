@@ -36,13 +36,23 @@ const INPUT_CLASS = [
   'transition-all duration-200',
 ].join(' ');
 
-// Extrai nomes de tags locais (sem prefixo de namespace) de um XML cru.
-function extractTagNames(rawXml) {
-  const names = new Set();
-  const re = /<([A-Za-z_][\w.-]*:)?([A-Za-z_][\w.-]*)[\s/>]/g;
-  let m;
-  while ((m = re.exec(rawXml))) names.add(m[2]);
-  return names;
+// Analisa o XML enviado via DOMParser: extrai as tags locais presentes
+// (sem prefixo de namespace) e a versão TISS declarada, se houver.
+function parseUploadedXml(rawXml) {
+  const doc = new DOMParser().parseFromString(rawXml, 'application/xml');
+  if (doc.querySelector('parsererror')) return null;
+
+  const tags = new Set();
+  let versaoTISS = null;
+  const allEls = doc.getElementsByTagName('*');
+  for (let i = 0; i < allEls.length; i++) {
+    const el = allEls[i];
+    tags.add(el.localName);
+    if (el.localName === 'versaoTISS' && !versaoTISS) {
+      versaoTISS = (el.textContent || '').trim() || null;
+    }
+  }
+  return { tags, versaoTISS };
 }
 
 // ── Component ────────────────────────────────────────────────────────────
@@ -76,11 +86,72 @@ export default function XmlTemplateBuilder() {
   const [myTemplates,        setMyTemplates]        = useState([]);
   const [loadingMyTemplates, setLoadingMyTemplates] = useState(false);
 
-  const seenOptionalsRef     = useRef(new Set());
-  const uploadedTagsRef      = useRef(null); // null = sem upload; Set = tags presentes no XML enviado
-  const previewDebounceRef   = useRef(null);
-  const pendingRestoreRef    = useRef(null); // paths a restaurar ao carregar um modelo salvo
-  const isRestoredSessionRef = useRef(false); // true enquanto editamos um modelo carregado
+  const seenOptionalsRef      = useRef(new Set());
+  const uploadedTagsRef       = useRef(null); // null = sem upload; Set = tags presentes no XML enviado
+  const previewDebounceRef    = useRef(null);
+  const pendingRestoreRef     = useRef(null); // paths a restaurar ao carregar um modelo salvo
+  const isRestoredSessionRef  = useRef(false); // true enquanto editamos um modelo carregado
+  const pendingSmartUploadRef = useRef(null); // tags a sincronizar assim que a nova árvore (versão) carregar
+  const smartUploadRunIdRef   = useRef(0); // invalida varreduras obsoletas se a seleção mudar no meio do caminho
+
+  // ── Smart Parsing: percorre a árvore XSD sincronizando os checkboxes com o
+  // esqueleto do XML enviado — só desce em ramos obrigatórios ou cuja tag
+  // esteja presente no arquivo, expandindo e marcando/desmarcando em lote.
+  const autoDiscoverFromXml = useCallback(async (tags, baseNode, versionId) => {
+    if (!baseNode || !versionId) return null;
+    const runId = ++smartUploadRunIdRef.current;
+
+    const toCheck      = [];
+    const toUncheck     = [];
+    const cacheUpdates = {};
+
+    async function walk(node, depth, visited) {
+      if (runId !== smartUploadRunIdRef.current) return;
+      if (depth > 10 || node.isLeaf || !node.type || visited.has(node.type)) return;
+      const nextVisited = new Set(visited);
+      nextVisited.add(node.type);
+
+      let children;
+      try {
+        const { data } = await api.get(
+          `/tools/xml-template-builder/tree?version_id=${versionId}&node_path=${encodeURIComponent(node.type)}`,
+        );
+        const raw = Array.isArray(data) ? data : (Array.isArray(data.children) ? data.children : []);
+        children = raw.map((c) => ({ ...c, path: `${node.path}.${c.name}` }));
+      } catch {
+        return;
+      }
+      if (runId !== smartUploadRunIdRef.current) return;
+
+      cacheUpdates[node.path] = { isOpen: true, children, isLoading: false };
+
+      const toRecurse = [];
+      for (const c of children) {
+        const isOptional = c.minOccurs === '0' || Number(c.minOccurs) === 0;
+        const present     = tags.has(c.name);
+        if (isOptional) {
+          seenOptionalsRef.current.add(c.path);
+          if (present) toCheck.push(c.path);
+          else toUncheck.push(c.path);
+        }
+        if (!c.isLeaf && (!isOptional || present)) toRecurse.push(c);
+      }
+      await Promise.all(toRecurse.map((c) => walk(c, depth + 1, nextVisited)));
+    }
+
+    await walk(baseNode, 0, new Set());
+    if (runId !== smartUploadRunIdRef.current) return null;
+
+    setNodeCache((prev) => ({ ...prev, ...cacheUpdates }));
+    setCheckedOptionals((prev) => {
+      const next = new Set(prev);
+      for (const p of toCheck) next.add(p);
+      for (const p of toUncheck) next.delete(p);
+      return next;
+    });
+
+    return { checkedCount: toCheck.length };
+  }, []);
 
   // ── Load versions ────────────────────────────────────────────────────
   useEffect(() => {
@@ -118,7 +189,8 @@ export default function XmlTemplateBuilder() {
     setLoadingEntry(true);
     api.get(`/tools/xml-template-builder/entry-node?version_id=${selectedVersionId}&transaction_type=${selectedType}`)
       .then(({ data }) => {
-        setRootNode({ ...data.node, path: data.node.name });
+        const freshNode = { ...data.node, path: data.node.name };
+        setRootNode(freshNode);
 
         // Modelo carregado via "Editar": restaura exatamente os blocos ativos salvos.
         if (pendingRestoreRef.current) {
@@ -127,11 +199,21 @@ export default function XmlTemplateBuilder() {
           isRestoredSessionRef.current = true;
           for (const p of restored) seenOptionalsRef.current.add(p);
           setCheckedOptionals(new Set(restored));
+        } else if (pendingSmartUploadRef.current) {
+          // Upload inteligente: a versão TISS foi detectada/trocada no XML —
+          // sincroniza a nova árvore assim que ela terminar de carregar.
+          const tags = pendingSmartUploadRef.current;
+          pendingSmartUploadRef.current = null;
+          autoDiscoverFromXml(tags, freshNode, selectedVersionId).then((result) => {
+            if (result?.checkedCount) {
+              toast.success(`Árvore sincronizada — ${result.checkedCount} bloco(s)/campo(s) ativado(s) automaticamente.`);
+            }
+          });
         }
       })
       .catch((err) => setEntryError(err?.response?.data?.error ?? 'Transação não disponível nesta versão.'))
       .finally(() => setLoadingEntry(false));
-  }, [selectedVersionId, selectedType]);
+  }, [selectedVersionId, selectedType, autoDiscoverFromXml]);
 
   // ── Lazy expand ──────────────────────────────────────────────────────
   const handleExpand = useCallback(async (node, state) => {
@@ -217,18 +299,23 @@ export default function XmlTemplateBuilder() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVersionId, selectedType, rootNode, checkedOptionals.size, Array.from(checkedOptionals).join(',')]);
 
-  // ── Upload de XML (drag-and-drop) ─────────────────────────────────────
+  // ── Upload de XML (drag-and-drop) — Smart Parsing ──────────────────────
   function handleFile(file) {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      const tags = extractTagNames(String(reader.result));
+    reader.onload = async () => {
+      const parsed = parseUploadedXml(String(reader.result));
+      if (!parsed) {
+        toast.error('Não foi possível interpretar o XML enviado — verifique se o arquivo é válido.');
+        return;
+      }
+      const { tags, versaoTISS } = parsed;
+
       uploadedTagsRef.current = tags;
       isRestoredSessionRef.current = false; // upload manual passa a ser a fonte da verdade
       setUploadedFileName(file.name);
-      toast.success(`Arquivo "${file.name}" analisado — ${tags.size} tags detectadas.`);
 
-      // Reaplica o filtro de tags presentes no arquivo às opcionais já carregadas na árvore.
+      // Reaplica rapidamente o filtro de tags às opcionais já vistas na árvore.
       setCheckedOptionals((prev) => {
         const next = new Set(prev);
         for (const path of seenOptionalsRef.current) {
@@ -238,6 +325,35 @@ export default function XmlTemplateBuilder() {
         }
         return next;
       });
+
+      // Metadados: detecta a versão TISS declarada no XML e seleciona o dropdown.
+      let versionChanged = false;
+      if (versaoTISS) {
+        const norm  = (s) => String(s).replace(/[^\d]/g, '');
+        const match = versions.find((v) => v.version === versaoTISS || norm(v.version) === norm(versaoTISS));
+        if (match && String(match.id) !== String(selectedVersionId)) {
+          versionChanged = true;
+          toast.info(`Versão TISS detectada: ${match.version} — selecionada automaticamente.`);
+          pendingSmartUploadRef.current = tags;
+          setSelectedVersionId(String(match.id));
+        }
+      }
+
+      toast.success(`Arquivo "${file.name}" analisado — ${tags.size} tags detectadas.`);
+
+      // Smart Parsing: sincroniza a árvore inteira (expandir + marcar/desmarcar)
+      // com o esqueleto do XML enviado. Se a versão mudou, a sincronização é
+      // disparada depois, quando a nova árvore terminar de carregar.
+      if (!versionChanged) {
+        if (rootNode && selectedVersionId) {
+          const result = await autoDiscoverFromXml(tags, rootNode, selectedVersionId);
+          if (result?.checkedCount) {
+            toast.success(`Árvore sincronizada — ${result.checkedCount} bloco(s)/campo(s) ativado(s) automaticamente.`);
+          }
+        } else if (!selectedType) {
+          toast.message('Selecione o serviço para sincronizar a árvore com o XML enviado.');
+        }
+      }
     };
     reader.readAsText(file);
   }
