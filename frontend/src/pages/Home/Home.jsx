@@ -74,32 +74,32 @@ const CODE_STAGES = [
 const DEV_FEATURES = [
   {
     icon: Code2,
-    title: 'Documentação Interativa',
-    description: 'Navegue pelos schemas TISS com exemplos prontos em XML, JSON e cURL. Copie e cole direto no seu projeto.',
+    title: 'Swagger Visual TISS',
+    description: 'Navegue pela documentação interativa do padrão TISS/ANS com inspeção de campos, busca avançada e exemplos prontos para sua integração.',
     color: 'text-blue-400',
     bg: 'bg-blue-500/10 dark:bg-blue-500/10',
     hover: 'hover:border-blue-500/50 dark:hover:border-blue-500/40',
   },
   {
-    icon: Terminal,
-    title: 'Parser & Conversor XML',
-    description: 'Converta mensagens TISS entre XML e JSON estruturado, ou gere payloads de teste automaticamente via API REST.',
-    color: 'text-emerald-400',
-    bg: 'bg-emerald-500/10',
-    hover: 'hover:border-emerald-500/50 dark:hover:border-emerald-500/40',
-  },
-  {
     icon: Layers,
-    title: 'Comparador de Layouts',
-    description: 'Diff visual entre versões TISS 3.03/3.04/3.05 com highlight de campos adicionados, alterados ou removidos.',
+    title: 'Comparador Estático de Versões',
+    description: 'Compare versões TISS 3.x/4.x lado a lado e visualize com precisão todos os campos adicionados, alterados ou removidos antes de migrar.',
     color: 'text-purple-400',
     bg: 'bg-purple-500/10',
     hover: 'hover:border-purple-500/50 dark:hover:border-purple-500/40',
   },
   {
+    icon: Terminal,
+    title: 'Visualizador Humanizado de XML',
+    description: 'Interprete arquivos XML TISS complexos em cards legíveis, com suporte a lotes e múltiplas guias — sem decifrar tags manualmente.',
+    color: 'text-emerald-400',
+    bg: 'bg-emerald-500/10',
+    hover: 'hover:border-emerald-500/50 dark:hover:border-emerald-500/40',
+  },
+  {
     icon: Cpu,
-    title: 'Geração de Schemas',
-    description: 'Exporte tipagens TypeScript, interfaces Go ou modelos Python gerados diretamente a partir dos XSDs da ANS.',
+    title: 'IDE Interativa TISS',
+    description: 'Edite e valide XMLs TISS diretamente no navegador, com validação em tempo real contra o XSD oficial da ANS e highlight de erros por linha.',
     color: 'text-yellow-400',
     bg: 'bg-yellow-500/10',
     hover: 'hover:border-yellow-500/50 dark:hover:border-yellow-500/40',
@@ -109,32 +109,32 @@ const DEV_FEATURES = [
 const PRESTADOR_FEATURES = [
   {
     icon: ShieldCheck,
-    title: 'Validador Inteligente',
-    description: 'Valide guias TISS antes do envio e elimine glosas por campos obrigatórios ausentes ou preenchidos incorretamente.',
+    title: 'Swagger Visual TISS',
+    description: 'Entenda exatamente o que a ANS exige em cada campo da guia, evitando glosas por preenchimento incorreto ou informação ausente.',
     color: 'text-emerald-400',
     bg: 'bg-emerald-500/10',
     hover: 'hover:border-emerald-500/50 dark:hover:border-emerald-500/40',
   },
   {
     icon: Activity,
-    title: 'Decodificador de Rejeições',
-    description: 'Transforme os códigos de rejeição da ANS em linguagem clara, com a causa exata e o passo a passo de correção.',
+    title: 'Comparador Estático de Versões',
+    description: 'Saiba com antecedência o que muda entre versões do TISS e prepare sua equipe de faturamento antes da operadora exigir a atualização.',
     color: 'text-blue-400',
     bg: 'bg-blue-500/10',
     hover: 'hover:border-blue-500/50 dark:hover:border-blue-500/40',
   },
   {
     icon: BarChart3,
-    title: 'Painel de Faturamento',
-    description: 'Visão consolidada de todas as guias: status de retorno, valor em aberto, histórico e exportação para Excel.',
+    title: 'Visualizador Humanizado de XML',
+    description: 'Visualize o conteúdo de cada guia enviada em formato humano, sem precisar abrir o XML bruto para auditar valores e procedimentos.',
     color: 'text-purple-400',
     bg: 'bg-purple-500/10',
     hover: 'hover:border-purple-500/50 dark:hover:border-purple-500/40',
   },
   {
     icon: Zap,
-    title: 'Alertas em Tempo Real',
-    description: 'Receba notificações imediatas sobre inconsistências nos lotes enviados antes que eles causem devoluções.',
+    title: 'IDE Interativa TISS',
+    description: 'Corrija guias rejeitadas diretamente na ferramenta, com validação instantânea, antes de reenviar o lote para a operadora.',
     color: 'text-yellow-400',
     bg: 'bg-yellow-500/10',
     hover: 'hover:border-yellow-500/50 dark:hover:border-yellow-500/40',
@@ -460,10 +460,10 @@ export default function Home() {
 
               {/* Subtitle */}
               <p className="text-base sm:text-lg text-slate-600 dark:text-slate-400 leading-relaxed mb-8 max-w-xl">
-                Ferramentas analíticas e geradores de código para desenvolvedores, somados a validadores
-                inteligentes para equipes de faturamento.{' '}
+                Acelere sua integração com o padrão ANS. Explore schemas XSD, valide guias
+                instantaneamente e compare versões em segundos.{' '}
                 <span className="text-slate-800 dark:text-slate-200 font-medium">
-                  Contrate o ecossistema completo ou pague apenas pelo módulo que usar.
+                  Crie sua conta e ganhe 30 dias de acesso total gratuito.
                 </span>
               </p>
 
@@ -488,7 +488,7 @@ export default function Home() {
                                translate-x-[-200%] group-hover:translate-x-[200%]
                                transition-transform duration-700"
                   />
-                  <span className="relative">Começar gratuitamente</span>
+                  <span className="relative">Iniciar Teste de 30 Dias</span>
                   <ArrowRight
                     size={16}
                     className="relative transition-transform duration-300 group-hover:translate-x-1"
@@ -510,6 +510,12 @@ export default function Home() {
                   <span className="text-emerald-500 font-bold">$</span> login --token
                 </Link>
               </div>
+
+              {/* Conversion micro-copy */}
+              <p className="mt-4 flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
+                <Check size={13} className="text-emerald-500 shrink-0" />
+                Sem complicação. Sem cartão de crédito.
+              </p>
 
               {/* Stats */}
               <div className="mt-10 pt-8 border-t border-slate-200/60 dark:border-slate-800/60
@@ -580,22 +586,23 @@ export default function Home() {
               <div
                 key={title}
                 className={`group relative overflow-hidden
-                            bg-white/60 dark:bg-slate-900/50
+                            bg-white/40 dark:bg-slate-900/40
                             backdrop-blur-xl
-                            border border-slate-200/60 dark:border-slate-700/40
+                            border border-slate-200/70 dark:border-slate-700/50
                             rounded-2xl p-6
                             hover:scale-[1.02] hover:shadow-xl
                             transition-all duration-300 cursor-default
                             ${hover}`}
               >
-                {/* Glass shine */}
-                <div className="pointer-events-none absolute inset-0 rounded-2xl
-                                bg-gradient-to-br from-white/40 dark:from-white/3 to-transparent" />
+                {/* Gradient glow — subtle, only on hover */}
+                <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100
+                                bg-gradient-to-br from-blue-500/10 via-transparent to-emerald-500/10
+                                transition-opacity duration-500" />
                 <div className={`relative w-11 h-11 rounded-xl flex items-center justify-center mb-4 ${bg}`}>
                   <Icon size={20} className={color} />
                 </div>
-                <h3 className="relative font-semibold text-slate-900 dark:text-slate-50 mb-2">{title}</h3>
-                <p className="relative text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{description}</p>
+                <h3 className="relative font-semibold text-slate-900 dark:text-white mb-2">{title}</h3>
+                <p className="relative text-sm text-slate-600 dark:text-slate-400 leading-relaxed">{description}</p>
               </div>
             ))}
           </div>
@@ -612,14 +619,14 @@ export default function Home() {
                             bg-blue-50/80 dark:bg-blue-900/10
                             text-xs font-semibold text-blue-700 dark:text-blue-300">
               <Zap size={12} />
-              Pague apenas pelo módulo que precisar — expanda quando quiser
+              Experimente todas as ferramentas TISS por 30 dias grátis
             </div>
 
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-slate-50 mb-4">
               Planos Modulares
             </h2>
             <p className="text-slate-500 dark:text-slate-400 max-w-xl mx-auto">
-              Sem fidelidade, sem surpresas. Combine os módulos que a sua equipe usa e cancele quando quiser.
+              Comece com 30 dias de acesso total gratuito. Depois, escolha o plano ideal para o seu time — sem fidelidade, sem surpresas.
             </p>
           </div>
 
@@ -687,7 +694,7 @@ export default function Home() {
                 Comece a construir com TISS hoje.
               </h2>
               <p className="text-blue-100 text-lg mb-8">
-                Crie sua conta gratuita, explore a documentação interativa e faça sua primeira validação em menos de 5 minutos.
+                Crie sua conta e ganhe 30 dias de acesso total gratuito a todas as ferramentas TISS. Faça sua primeira validação em menos de 5 minutos.
               </p>
               <Link
                 to="/register"
@@ -697,9 +704,13 @@ export default function Home() {
                            shadow-lg hover:shadow-xl
                            hover:scale-[1.02] transition-all duration-300"
               >
-                Criar conta gratuita
+                Iniciar Teste de 30 Dias
                 <ArrowRight size={18} className="transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
+              <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-blue-100">
+                <Check size={13} className="shrink-0" />
+                Sem complicação. Sem cartão de crédito.
+              </p>
             </div>
           </div>
         </div>
