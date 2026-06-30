@@ -51,6 +51,8 @@ const SERVICE_TAG_TO_TYPE = {
 // (sem prefixo de namespace), a versão TISS declarada em <ans:Padrao>
 // (filha de <ans:cabecalho>) e o tipo de serviço deduzido da tag
 // estrutural presente (ex: <ans:loteGuias> → ENVIO_LOTE_GUIAS).
+// A busca por "Padrao" é case-insensitive: alguns geradores de XML TISS
+// emitem a tag como <ans:padrao> em vez de <ans:Padrao>.
 function parseUploadedXml(rawXml) {
   const doc = new DOMParser().parseFromString(rawXml, 'application/xml');
   if (doc.querySelector('parsererror')) return null;
@@ -61,7 +63,7 @@ function parseUploadedXml(rawXml) {
   for (let i = 0; i < allEls.length; i++) {
     const el = allEls[i];
     tags.add(el.localName);
-    if (el.localName === 'Padrao' && !versaoTISS) {
+    if (!versaoTISS && el.localName.toLowerCase() === 'padrao') {
       versaoTISS = (el.textContent || '').trim() || null;
     }
   }
