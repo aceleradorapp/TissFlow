@@ -36,8 +36,21 @@ const INPUT_CLASS = [
   'transition-all duration-200',
 ].join(' ');
 
+// Mapeia a tag estrutural filha de prestadorParaOperadora/operadoraParaPrestador
+// para o tipo de transação correspondente — espelha ENTRY_PATHS do backend
+// (backend/src/services/tools/generatorService.js).
+const SERVICE_TAG_TO_TYPE = {
+  loteGuias:                'ENVIO_LOTE_GUIAS',
+  recursoGlosa:              'ENVIO_RECURSO_GLOSA',
+  solicitacaoElegibilidade:  'SOLICITACAO_ELEGIBILIDADE',
+  respostaElegibilidade:     'RESPOSTA_ELEGIBILIDADE',
+  autorizacaoSolicitacao:    'AUTORIZACAO_SOLICITACAO',
+};
+
 // Analisa o XML enviado via DOMParser: extrai as tags locais presentes
-// (sem prefixo de namespace) e a versão TISS declarada, se houver.
+// (sem prefixo de namespace), a versão TISS declarada em <ans:Padrao>
+// (filha de <ans:cabecalho>) e o tipo de serviço deduzido da tag
+// estrutural presente (ex: <ans:loteGuias> → ENVIO_LOTE_GUIAS).
 function parseUploadedXml(rawXml) {
   const doc = new DOMParser().parseFromString(rawXml, 'application/xml');
   if (doc.querySelector('parsererror')) return null;
@@ -48,11 +61,17 @@ function parseUploadedXml(rawXml) {
   for (let i = 0; i < allEls.length; i++) {
     const el = allEls[i];
     tags.add(el.localName);
-    if (el.localName === 'versaoTISS' && !versaoTISS) {
+    if (el.localName === 'Padrao' && !versaoTISS) {
       versaoTISS = (el.textContent || '').trim() || null;
     }
   }
-  return { tags, versaoTISS };
+
+  let detectedType = null;
+  for (const [tagName, type] of Object.entries(SERVICE_TAG_TO_TYPE)) {
+    if (tags.has(tagName)) { detectedType = type; break; }
+  }
+
+  return { tags, versaoTISS, detectedType };
 }
 
 // ── Component ────────────────────────────────────────────────────────────
@@ -299,7 +318,7 @@ export default function XmlTemplateBuilder() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedVersionId, selectedType, rootNode, checkedOptionals.size, Array.from(checkedOptionals).join(',')]);
 
-  // ── Upload de XML (drag-and-drop) — Smart Parsing ──────────────────────
+  // ── Upload de XML (drag-and-drop) — Smart Parsing + Auto-Detect ────────
   function handleFile(file) {
     if (!file) return;
     const reader = new FileReader();
@@ -309,7 +328,7 @@ export default function XmlTemplateBuilder() {
         toast.error('Não foi possível interpretar o XML enviado — verifique se o arquivo é válido.');
         return;
       }
-      const { tags, versaoTISS } = parsed;
+      const { tags, versaoTISS, detectedType } = parsed;
 
       uploadedTagsRef.current = tags;
       isRestoredSessionRef.current = false; // upload manual passa a ser a fonte da verdade
@@ -326,33 +345,49 @@ export default function XmlTemplateBuilder() {
         return next;
       });
 
-      // Metadados: detecta a versão TISS declarada no XML e seleciona o dropdown.
-      let versionChanged = false;
+      // Auto-Detect 1/2: versão TISS declarada em <ans:Padrao>.
+      let nextVersionId   = selectedVersionId;
+      let versionChanged  = false;
       if (versaoTISS) {
         const norm  = (s) => String(s).replace(/[^\d]/g, '');
         const match = versions.find((v) => v.version === versaoTISS || norm(v.version) === norm(versaoTISS));
-        if (match && String(match.id) !== String(selectedVersionId)) {
-          versionChanged = true;
-          toast.info(`Versão TISS detectada: ${match.version} — selecionada automaticamente.`);
-          pendingSmartUploadRef.current = tags;
-          setSelectedVersionId(String(match.id));
+        if (match) {
+          if (String(match.id) !== String(selectedVersionId)) {
+            nextVersionId  = String(match.id);
+            versionChanged = true;
+            toast.info(`Versão TISS detectada: ${match.version} — selecionada automaticamente.`);
+          }
+        } else {
+          toast.warning(`Versão TISS "${versaoTISS}" detectada no arquivo, mas não está disponível no sistema.`);
         }
+      }
+
+      // Auto-Detect 2/2: serviço deduzido da tag estrutural (loteGuias, recursoGlosa, ...).
+      let nextType    = selectedType;
+      let typeChanged = false;
+      if (detectedType && detectedType !== selectedType) {
+        nextType    = detectedType;
+        typeChanged = true;
+        const label = TRANSACTION_TYPES.find((t) => t.value === detectedType)?.label ?? detectedType;
+        toast.info(`Serviço detectado: ${label} — selecionado automaticamente.`);
       }
 
       toast.success(`Arquivo "${file.name}" analisado — ${tags.size} tags detectadas.`);
 
       // Smart Parsing: sincroniza a árvore inteira (expandir + marcar/desmarcar)
-      // com o esqueleto do XML enviado. Se a versão mudou, a sincronização é
-      // disparada depois, quando a nova árvore terminar de carregar.
-      if (!versionChanged) {
-        if (rootNode && selectedVersionId) {
-          const result = await autoDiscoverFromXml(tags, rootNode, selectedVersionId);
-          if (result?.checkedCount) {
-            toast.success(`Árvore sincronizada — ${result.checkedCount} bloco(s)/campo(s) ativado(s) automaticamente.`);
-          }
-        } else if (!selectedType) {
-          toast.message('Selecione o serviço para sincronizar a árvore com o XML enviado.');
+      // com o esqueleto do XML enviado. Se versão e/ou serviço mudaram, a
+      // sincronização é adiada até a nova árvore terminar de carregar.
+      if (versionChanged || typeChanged) {
+        pendingSmartUploadRef.current = tags;
+        if (versionChanged) setSelectedVersionId(nextVersionId);
+        if (typeChanged) setSelectedType(nextType);
+      } else if (rootNode && selectedVersionId && selectedType) {
+        const result = await autoDiscoverFromXml(tags, rootNode, selectedVersionId);
+        if (result?.checkedCount) {
+          toast.success(`Árvore sincronizada — ${result.checkedCount} bloco(s)/campo(s) ativado(s) automaticamente.`);
         }
+      } else if (!selectedVersionId || !selectedType) {
+        toast.message('Não foi possível detectar a versão/serviço automaticamente — selecione manualmente.');
       }
     };
     reader.readAsText(file);
