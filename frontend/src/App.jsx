@@ -28,7 +28,13 @@ export default function App() {
   return (
     <BrowserRouter>
     <SettingsProvider>
-      <Toaster position="top-right" richColors />
+      <Toaster
+        position="top-right"
+        richColors
+        expand
+        gap={8}
+        className="z-[9999]"
+      />
       <Routes>
         {/* Públicas */}
         <Route path="/"                element={<Home />} />
