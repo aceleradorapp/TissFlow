@@ -593,11 +593,12 @@ export default function TissValidator() {
 
       </div>
 
-      <GuideModal
-        isOpen={isGuideOpen}
-        onClose={() => setIsGuideOpen(false)}
-        guide={TOOL_GUIDES['tiss-validator']}
-      />
+      {isGuideOpen && (
+        <GuideModal
+          guide={TOOL_GUIDES['tiss-validator']}
+          onClose={() => setIsGuideOpen(false)}
+        />
+      )}
     </DashboardLayout>
   );
 }
