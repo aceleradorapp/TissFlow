@@ -91,13 +91,19 @@ function extractRestrictions(typeName, registry) {
 
 // ── Element mapping ────────────────────────────────────────────────────────
 
-function mapElement(el, registry) {
+function mapElement(el, registry, opts = {}) {
   if (!el?.['@_name']) return null;
 
   const name        = el['@_name'];
   const rawType     = el['@_type'];
   const typeName    = stripNs(rawType);
-  const minOccurs   = String(el['@_minOccurs'] ?? '1');
+  // Membros de um xs:choice são alternativas entre si — mesmo sem minOccurs="0"
+  // explícito no XSD, cada elemento é individualmente opcional (o grupo exige
+  // apenas que algum seja escolhido, não todos). Só força quando o XSD não
+  // declarou minOccurs explicitamente, respeitando overrides intencionais.
+  const minOccurs   = (opts.forceOptional && el['@_minOccurs'] === undefined)
+    ? '0'
+    : String(el['@_minOccurs'] ?? '1');
   const maxOccurs   = String(el['@_maxOccurs'] ?? '1');
   const description = extractDoc(el);
 
@@ -120,24 +126,27 @@ function mapElement(el, registry) {
   return { name, type: typeName, minOccurs, maxOccurs, description, isLeaf, restrictions };
 }
 
-// Recursively collect elements from sequence / choice / all containers
-function elementsFromContainer(container, registry, depth = 0) {
+// Recursively collect elements from sequence / choice / all containers.
+// `opts.forceOptional` propagates down from an ancestor xs:choice so every
+// element nested inside it (directly or via further sequence/choice/all) is
+// treated as an independently toggle-able alternative.
+function elementsFromContainer(container, registry, depth = 0, opts = {}) {
   if (!container || depth > 8) return [];
 
   const out = [];
 
   for (const el of [].concat(container.element || [])) {
-    const mapped = mapElement(el, registry);
+    const mapped = mapElement(el, registry, opts);
     if (mapped) out.push(mapped);
   }
   for (const seq of [].concat(container.sequence || [])) {
-    out.push(...elementsFromContainer(seq, registry, depth + 1));
+    out.push(...elementsFromContainer(seq, registry, depth + 1, opts));
   }
   for (const ch of [].concat(container.choice || [])) {
-    out.push(...elementsFromContainer(ch, registry, depth + 1));
+    out.push(...elementsFromContainer(ch, registry, depth + 1, { ...opts, forceOptional: true }));
   }
   for (const al of [].concat(container.all || [])) {
-    out.push(...elementsFromContainer(al, registry, depth + 1));
+    out.push(...elementsFromContainer(al, registry, depth + 1, opts));
   }
   return out;
 }
@@ -150,9 +159,11 @@ function getComplexChildren(typeName, registry, visited = new Set()) {
   const ct = registry.complexTypes[typeName];
   if (!ct) return [];
 
-  // Direct sequence / choice / all
-  const seq = ct.sequence?.[0] || ct.choice?.[0] || ct.all?.[0];
-  if (seq) return elementsFromContainer(seq, registry);
+  // Direct sequence / choice / all — a top-level xs:choice forces its
+  // direct elements to be treated as optional alternatives (see mapElement).
+  if (ct.sequence?.[0]) return elementsFromContainer(ct.sequence[0], registry);
+  if (ct.choice?.[0])   return elementsFromContainer(ct.choice[0], registry, 0, { forceOptional: true });
+  if (ct.all?.[0])      return elementsFromContainer(ct.all[0], registry);
 
   // ComplexContent → extension (inheritance: base + own fields)
   const cc = ct.complexContent?.[0];
@@ -163,8 +174,11 @@ function getComplexChildren(typeName, registry, visited = new Set()) {
     const baseName = branch ? stripNs(branch['@_base']) : null;
 
     const baseChildren = (baseName && ext) ? getComplexChildren(baseName, registry, visited) : [];
-    const ownSeq       = branch?.sequence?.[0] || branch?.choice?.[0] || branch?.all?.[0];
-    const ownChildren  = ownSeq ? elementsFromContainer(ownSeq, registry) : [];
+
+    let ownChildren = [];
+    if (branch?.sequence?.[0]) ownChildren = elementsFromContainer(branch.sequence[0], registry);
+    else if (branch?.choice?.[0]) ownChildren = elementsFromContainer(branch.choice[0], registry, 0, { forceOptional: true });
+    else if (branch?.all?.[0]) ownChildren = elementsFromContainer(branch.all[0], registry);
 
     return [...baseChildren, ...ownChildren];
   }

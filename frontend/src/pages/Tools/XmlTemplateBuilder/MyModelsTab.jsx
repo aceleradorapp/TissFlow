@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, Power, Trash2, Loader2, FolderOpen, Calendar } from 'lucide-react';
+import { Download, Power, Trash2, Loader2, FolderOpen, Calendar, Pencil } from 'lucide-react';
 
 const STATUS_BADGE = {
   true:  'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30',
@@ -13,7 +13,7 @@ function fmtDate(iso) {
   });
 }
 
-export default function MyModelsTab({ templates, loading, onToggleStatus, onDelete }) {
+export default function MyModelsTab({ templates, loading, onToggleStatus, onDelete, onEdit }) {
   const [busyId, setBusyId] = useState(null);
 
   function parseContent(raw) {
@@ -113,6 +113,16 @@ export default function MyModelsTab({ templates, loading, onToggleStatus, onDele
               </td>
               <td className="px-4 py-3">
                 <div className="flex items-center justify-end gap-1.5">
+                  <button
+                    type="button"
+                    title="Editar no Construtor"
+                    onClick={() => onEdit(tpl)}
+                    className="p-1.5 rounded-lg text-emerald-600 dark:text-[#34d399] bg-emerald-50 dark:bg-emerald-500/10
+                               border border-emerald-200 dark:border-emerald-500/30
+                               hover:bg-emerald-100 dark:hover:bg-emerald-500/20 transition-all duration-150"
+                  >
+                    <Pencil size={13} />
+                  </button>
                   <button
                     type="button"
                     title="Baixar XML"

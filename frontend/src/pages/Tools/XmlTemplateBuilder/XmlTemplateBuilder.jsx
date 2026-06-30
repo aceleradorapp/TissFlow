@@ -76,9 +76,11 @@ export default function XmlTemplateBuilder() {
   const [myTemplates,        setMyTemplates]        = useState([]);
   const [loadingMyTemplates, setLoadingMyTemplates] = useState(false);
 
-  const seenOptionalsRef   = useRef(new Set());
-  const uploadedTagsRef    = useRef(null); // null = sem upload; Set = tags presentes no XML enviado
-  const previewDebounceRef = useRef(null);
+  const seenOptionalsRef     = useRef(new Set());
+  const uploadedTagsRef      = useRef(null); // null = sem upload; Set = tags presentes no XML enviado
+  const previewDebounceRef   = useRef(null);
+  const pendingRestoreRef    = useRef(null); // paths a restaurar ao carregar um modelo salvo
+  const isRestoredSessionRef = useRef(false); // true enquanto editamos um modelo carregado
 
   // ── Load versions ────────────────────────────────────────────────────
   useEffect(() => {
@@ -109,12 +111,24 @@ export default function XmlTemplateBuilder() {
     setEntryError(null);
     setPreview(null);
     seenOptionalsRef.current = new Set();
+    isRestoredSessionRef.current = false;
 
     if (!selectedVersionId || !selectedType) return;
 
     setLoadingEntry(true);
     api.get(`/tools/xml-template-builder/entry-node?version_id=${selectedVersionId}&transaction_type=${selectedType}`)
-      .then(({ data }) => setRootNode({ ...data.node, path: data.node.name }))
+      .then(({ data }) => {
+        setRootNode({ ...data.node, path: data.node.name });
+
+        // Modelo carregado via "Editar": restaura exatamente os blocos ativos salvos.
+        if (pendingRestoreRef.current) {
+          const restored = pendingRestoreRef.current;
+          pendingRestoreRef.current = null;
+          isRestoredSessionRef.current = true;
+          for (const p of restored) seenOptionalsRef.current.add(p);
+          setCheckedOptionals(new Set(restored));
+        }
+      })
       .catch((err) => setEntryError(err?.response?.data?.error ?? 'Transação não disponível nesta versão.'))
       .finally(() => setLoadingEntry(false));
   }, [selectedVersionId, selectedType]);
@@ -143,6 +157,9 @@ export default function XmlTemplateBuilder() {
       for (const c of children) {
         if (c.minOccurs === '0' || Number(c.minOccurs) === 0) {
           seenOptionalsRef.current.add(c.path);
+          // Modelo carregado via "Editar": não auto-marca novas opcionais —
+          // o estado vem exclusivamente do que foi restaurado (active_optional_paths).
+          if (isRestoredSessionRef.current) continue;
           // Sem upload: opcional vem marcado por padrão. Com upload: só marca se a tag existir no XML enviado.
           if (!uploadedTagsRef.current || uploadedTagsRef.current.has(c.name)) {
             newOpts.push(c.path);
@@ -207,6 +224,7 @@ export default function XmlTemplateBuilder() {
     reader.onload = () => {
       const tags = extractTagNames(String(reader.result));
       uploadedTagsRef.current = tags;
+      isRestoredSessionRef.current = false; // upload manual passa a ser a fonte da verdade
       setUploadedFileName(file.name);
       toast.success(`Arquivo "${file.name}" analisado — ${tags.size} tags detectadas.`);
 
@@ -265,6 +283,42 @@ export default function XmlTemplateBuilder() {
     } finally {
       setSaving(false);
     }
+  }
+
+  // ── Carregar modelo salvo de volta no Construtor (edição) ─────────────
+  function handleEditTemplate(tpl) {
+    const versionMatch = versions.find((v) => v.version === tpl.version_tiss);
+    if (!versionMatch) {
+      toast.error('A versão TISS deste modelo não está mais disponível.');
+      return;
+    }
+
+    let parsed = null;
+    try { parsed = JSON.parse(tpl.content); } catch { /* conteúdo inválido */ }
+    const activePaths = Array.isArray(parsed?.active_optional_paths) ? parsed.active_optional_paths : [];
+
+    uploadedTagsRef.current = null;
+    setUploadedFileName(null);
+    setTemplateName(tpl.name);
+    setTemplateDescription(tpl.description ?? '');
+    setActiveTab('builder');
+
+    const versionIdStr   = String(versionMatch.id);
+    const sameSelection   = String(selectedVersionId) === versionIdStr && selectedType === tpl.transacao_tipo;
+
+    if (sameSelection && rootNode) {
+      // Já estamos na mesma árvore (versão + serviço inalterados) — aplica direto.
+      isRestoredSessionRef.current = true;
+      seenOptionalsRef.current = new Set(activePaths);
+      setNodeCache({});
+      setCheckedOptionals(new Set(activePaths));
+    } else {
+      pendingRestoreRef.current = activePaths;
+      setSelectedVersionId(versionIdStr);
+      setSelectedType(tpl.transacao_tipo);
+    }
+
+    toast.success(`Modelo "${tpl.name}" carregado no Construtor.`);
   }
 
   // ── Gestão de modelos salvos ───────────────────────────────────────────
@@ -349,6 +403,7 @@ export default function XmlTemplateBuilder() {
                 loading={loadingMyTemplates}
                 onToggleStatus={handleToggleStatus}
                 onDelete={handleDeleteTemplate}
+                onEdit={handleEditTemplate}
               />
             </div>
           </div>

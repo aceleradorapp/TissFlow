@@ -10,3 +10,9 @@ Implementar um construtor de templates XML baseado em XSD onde o usuário pode l
 
 ## 3. Integração Cross-Tool (O Gancho Próximo)
 - O endpoint `GET /api/user/xml-templates` deve listar os modelos ativos do usuário. Essa mesma API será consumida pelo botão "Carregar Lista Particular" na ferramenta `class-generator`.
+
+## 4. Hierarquia de Seleção e Poda de Árvore (Tree Pruning)
+- O construtor deve tratar a árvore XML como um modelo hierárquico.
+- **Blocos de Guia:** Cada tipo de guia dentro de `guiasTISS` deve possuir um controle de ativação global.
+- **Lógica de Gerador:** Ao desativar uma guia (ex: `guiaConsulta`), o compilador deve excluir o nó completo e todos os seus filhos do XML final, garantindo que o payload enviado seja estritamente o que o usuário selecionou.
+- **Experiência Visual:** O preview de código deve reagir em tempo real (instantaneous re-render) ao ligar/desligar blocos inteiros.
