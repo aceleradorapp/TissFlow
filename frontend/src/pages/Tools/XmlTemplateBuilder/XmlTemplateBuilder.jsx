@@ -67,6 +67,7 @@ function parseUploadedXml(rawXml) {
       versaoTISS = (el.textContent || '').trim() || null;
     }
   }
+  console.log('[xml-template-builder] Versão Detectada Bruta:', versaoTISS);
 
   let detectedType = null;
   for (const [tagName, type] of Object.entries(SERVICE_TAG_TO_TYPE)) {
@@ -351,8 +352,21 @@ export default function XmlTemplateBuilder() {
       let nextVersionId   = selectedVersionId;
       let versionChanged  = false;
       if (versaoTISS) {
-        const norm  = (s) => String(s).replace(/[^\d]/g, '');
-        const match = versions.find((v) => v.version === versaoTISS || norm(v.version) === norm(versaoTISS));
+        const clean      = (s) => String(s).trim().toLowerCase();
+        const digitsOnly = (s) => clean(s).replace(/[^\d]/g, '');
+        const majorMinor = (s) => clean(s).split('.').slice(0, 2).join('.'); // "4.00.01" → "4.00"
+        const detectedClean = clean(versaoTISS);
+
+        const match = versions.find((v) => {
+          const vClean = clean(v.version);
+          return (
+            vClean === detectedClean ||
+            digitsOnly(v.version) === digitsOnly(versaoTISS) ||
+            majorMinor(v.version) === majorMinor(versaoTISS) ||
+            vClean.includes(detectedClean) || detectedClean.includes(vClean)
+          );
+        });
+        console.log('[xml-template-builder] Versões disponíveis:', versions.map((v) => v.version), '| Match encontrado:', match?.version ?? null);
         if (match) {
           if (String(match.id) !== String(selectedVersionId)) {
             nextVersionId  = String(match.id);
