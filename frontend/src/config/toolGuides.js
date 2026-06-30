@@ -49,4 +49,14 @@ export const TOOL_GUIDES = {
     ],
     proTip: 'O botão "Exportar PDF" gera um relatório profissional respeitando todos os filtros ativos — exporta exatamente o que está visível na tela no momento da exportação.',
   },
+  'class-generator': {
+    title: 'Gerador de Modelos XML e Classes',
+    description: 'Gere classes tipadas em .NET, TypeScript, Go e Python, ou um XML modelo, diretamente a partir da estrutura oficial do XSD da ANS.',
+    steps: [
+      'Selecione a versão TISS e a transação raiz desejada no painel esquerdo.',
+      'Escolha a linguagem alvo na barra de abas (.NET, TypeScript, Go, Python ou XML Modelo).',
+      'Use "Copiar Código" para copiar o resultado, ou "Baixar Arquivo" para exportar o arquivo completo.',
+    ],
+    proTip: 'Usuários no plano Free Trial podem visualizar o código normalmente na tela — o download do arquivo completo é um recurso exclusivo dos planos pagos.',
+  },
 };

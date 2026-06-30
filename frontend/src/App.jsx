@@ -18,6 +18,7 @@ import TissGenerator    from './pages/Tools/TissGenerator';
 import TissViewer       from './pages/Tools/TissViewer';
 import TissIde            from './pages/Tools/TissIde';
 import VersionComparator  from './pages/Tools/VersionComparator';
+import ClassGenerator     from './pages/Tools/ClassGenerator';
 import SystemSettings     from './pages/Admin/SystemSettings/SystemSettings';
 import PrivateRoute   from './components/PrivateRoute';
 import AdminRoute     from './components/AdminRoute';
@@ -78,6 +79,9 @@ export default function App() {
         } />
         <Route path="/tools/version-diff" element={
           <PrivateRoute><VersionComparator /></PrivateRoute>
+        } />
+        <Route path="/tools/class-generator" element={
+          <PrivateRoute><ClassGenerator /></PrivateRoute>
         } />
       </Routes>
     </SettingsProvider>

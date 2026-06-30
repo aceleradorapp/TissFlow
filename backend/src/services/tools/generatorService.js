@@ -272,4 +272,4 @@ async function generate(versionId, transactionType, activeOptionalPaths) {
   };
 }
 
-module.exports = { generate, getEntryNode };
+module.exports = { generate, getEntryNode, ENTRY_PATHS };
