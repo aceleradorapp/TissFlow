@@ -1,10 +1,12 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ShieldCheck, ShieldX, ShieldAlert,
   UploadCloud, FileCode2, RefreshCw,
   CheckCircle2, XCircle, AlertTriangle,
   Download, BookOpen, Loader2,
   Hash, ScanSearch, Calculator,
+  Wand2, FileCheck2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '../../../components/DashboardLayout';
@@ -447,14 +449,37 @@ async function exportPdf(result, fileName) {
   }
 }
 
+// ── XML download helper ────────────────────────────────────────────────────────
+
+function downloadXml(xmlString, fileName) {
+  const blob = new Blob([xmlString], { type: 'application/xml' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = fileName.replace(/\.xml$/i, '_corrigido.xml');
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function TissValidator() {
-  const [loading,      setLoading]      = useState(false);
-  const [result,       setResult]       = useState(null);
-  const [fileName,     setFileName]     = useState('');
-  const [isGuideOpen,  setIsGuideOpen]  = useState(false);
-  const [exporting,    setExporting]    = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // State can be pre-populated when returning from XmlEditor with a fixed XML
+  const [loading,     setLoading]     = useState(false);
+  const [result,      setResult]      = useState(() => location.state?.result   ?? null);
+  const [fileName,    setFileName]    = useState(() => location.state?.fileName ?? '');
+  const [rawXml,      setRawXml]      = useState(() => location.state?.xml      ?? '');
+  const [fixedXml,    setFixedXml]    = useState(() => location.state?.fixedXml ?? null);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
+  const [exporting,   setExporting]   = useState(false);
+
+  // Clear location.state after reading so a page refresh doesn't re-apply it
+  useEffect(() => {
+    if (location.state) window.history.replaceState({}, '', location.pathname);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFile = useCallback(async (file) => {
     if (!file) return;
@@ -463,6 +488,10 @@ export default function TissValidator() {
       return;
     }
 
+    // Read raw text (needed for the XmlEditor flow)
+    const xmlText = await file.text();
+    setRawXml(xmlText);
+    setFixedXml(null);
     setFileName(file.name);
     setLoading(true);
     setResult(null);
@@ -491,6 +520,8 @@ export default function TissValidator() {
   function handleReset() {
     setResult(null);
     setFileName('');
+    setRawXml('');
+    setFixedXml(null);
   }
 
   async function handleExportPdf() {
@@ -522,7 +553,7 @@ export default function TissValidator() {
             </div>
 
             {result && (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <button
                   onClick={handleReset}
                   className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-xl
@@ -532,6 +563,33 @@ export default function TissValidator() {
                   <RefreshCw size={13} />
                   Novo Arquivo
                 </button>
+
+                {/* Visualizar e Corrigir — only when file has errors */}
+                {!result.valid && rawXml && (
+                  <button
+                    onClick={() => navigate('/tools/tiss-validator/editor', {
+                      state: { xml: rawXml, errors: result.errors, fileName },
+                    })}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl
+                               bg-amber-500 hover:bg-amber-400 text-white transition-all"
+                  >
+                    <Wand2 size={13} />
+                    Visualizar e Corrigir
+                  </button>
+                )}
+
+                {/* Download fixed XML — only when editor returned a corrected file */}
+                {fixedXml && (
+                  <button
+                    onClick={() => downloadXml(fixedXml, fileName)}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl
+                               bg-emerald-600 hover:bg-emerald-700 text-white transition-all"
+                  >
+                    <FileCheck2 size={13} />
+                    Baixar XML Corrigido
+                  </button>
+                )}
+
                 <button
                   onClick={handleExportPdf}
                   disabled={exporting}
