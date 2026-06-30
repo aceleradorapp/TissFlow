@@ -59,6 +59,16 @@ export const TOOL_GUIDES = {
     ],
     proTip: 'Usuários no plano Free Trial podem visualizar o código normalmente na tela — o download do arquivo completo é um recurso exclusivo dos planos pagos.',
   },
+  'tiss-validator': {
+    title: 'Validador Analítico TISS',
+    description: 'Valide arquivos XML TISS em 3 camadas independentes: conformidade estrutural XSD, integridade do hash MD5 e auditoria matemática de guias e procedimentos.',
+    steps: [
+      'Arraste e solte (ou clique para selecionar) um arquivo .xml TISS na área de upload — o sistema detecta automaticamente a versão e o tipo de transação.',
+      'Aguarde a validação: a Camada 1 verifica a estrutura XSD, a Camada 2 recalcula o hash MD5 e compara com o declarado em <epilogo>, e a Camada 3 audita cada procedimento e guia matematicamente.',
+      'Revise o card executivo: em verde (válido) ou vermelho (com falhas). A tabela de falhas mostra o código, a camada, a descrição e os valores exatos da divergência.',
+    ],
+    proTip: 'Clique em "Baixar Relatório" para exportar um PDF completo com o sumário do arquivo, o resultado por camada e o detalhamento de cada falha — ideal para envio ao prestador ou operadora.',
+  },
   'xml-template-builder': {
     title: 'Construtor de Modelos XML',
     description: 'Construa modelos XML personalizados a partir do XSD da ANS, ligando e desligando tags opcionais, e salve-os na sua biblioteca particular.',

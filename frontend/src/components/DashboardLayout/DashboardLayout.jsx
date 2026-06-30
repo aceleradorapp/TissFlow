@@ -4,7 +4,7 @@ import {
   LayoutDashboard, User, LogOut,
   ChevronLeft, ChevronRight,
   Menu, X, Sun, Moon, Stethoscope,
-  Users, Package, ScrollText, FileCode2, Network, Sparkles, Wrench, ScanSearch, Code2, GitCompare, Settings, ListChecks,
+  Users, Package, ScrollText, FileCode2, Network, Sparkles, Wrench, ScanSearch, Code2, GitCompare, Settings, ListChecks, ShieldCheck,
 } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
 
@@ -30,7 +30,8 @@ const TOOLS_NAV = [
   { to: '/tools/ide',           icon: Code2,        label: 'IDE Interativa TISS'   },
   { to: '/tools/version-diff',  icon: GitCompare,   label: 'Comparador de Versões' },
   { to: '/tools/class-generator', icon: Code2,      label: 'Gerador de Classes'    },
-  { to: '/tools/xml-template-builder', icon: ListChecks, label: 'Construtor de Modelos XML' },
+  { to: '/tools/xml-template-builder', icon: ListChecks,  label: 'Construtor de Modelos XML' },
+  { to: '/tools/tiss-validator',        icon: ShieldCheck, label: 'Validador TISS'             },
 ];
 
 export default function DashboardLayout({ children }) {
