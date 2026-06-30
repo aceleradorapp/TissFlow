@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ChevronDown, Loader2, AlertCircle, BookOpen, Sparkles,
   Hash, Braces, Box, Terminal, FileCode2,
-  X, Lock, Zap,
+  X, Lock, Zap, FolderOpen,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '../../../components/DashboardLayout';
@@ -133,6 +133,10 @@ export default function ClassGenerator() {
   const [userProfile,       setUserProfile]       = useState(null);
   const [showUpgradeModal,  setShowUpgradeModal]  = useState(false);
 
+  const [savedTemplates,    setSavedTemplates]    = useState([]);
+  const [showTemplateMenu,  setShowTemplateMenu]  = useState(false);
+  const templateMenuRef = useRef(null);
+
   const canDownload = userProfile?.plan?.name !== 'Free Trial';
 
   // ── Load versions ────────────────────────────────────────────────────
@@ -149,6 +153,34 @@ export default function ClassGenerator() {
       .then(({ data }) => setUserProfile(data.user))
       .catch(() => {});
   }, []);
+
+  // ── Load saved XML templates (cross-tool: xml-template-builder) ──────
+  useEffect(() => {
+    api.get('/xml-templates')
+      .then(({ data }) => setSavedTemplates((data.templates ?? []).filter((t) => t.is_active)))
+      .catch(() => {});
+  }, []);
+
+  // ── Close template menu on outside click ──────────────────────────────
+  useEffect(() => {
+    if (!showTemplateMenu) return;
+    function handleClickOutside(e) {
+      if (templateMenuRef.current && !templateMenuRef.current.contains(e.target)) {
+        setShowTemplateMenu(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showTemplateMenu]);
+
+  // ── Load a saved template's version + transaction type into the generator ─
+  function handleLoadTemplate(tpl) {
+    const matchedVersion = versions.find((v) => v.version === tpl.version_tiss);
+    if (matchedVersion) setSelectedVersionId(matchedVersion.id);
+    if (tpl.transacao_tipo) setSelectedType(tpl.transacao_tipo);
+    setShowTemplateMenu(false);
+    toast.success(`Estrutura do modelo "${tpl.name}" carregada.`);
+  }
 
   // ── Generate code whenever version + type + language are all set ────
   useEffect(() => {
@@ -282,18 +314,42 @@ export default function ClassGenerator() {
 
           </div>
 
-          {/* Base of sidebar: future feature button */}
-          <div className="shrink-0 p-4 border-t border-slate-200 dark:border-slate-800/60">
+          {/* Base of sidebar: load from user's saved XML template library */}
+          <div ref={templateMenuRef} className="relative shrink-0 p-4 border-t border-slate-200 dark:border-slate-800/60">
+            {showTemplateMenu && savedTemplates.length > 0 && (
+              <div className="absolute bottom-full left-4 right-4 mb-2 max-h-60 overflow-y-auto rounded-xl
+                              bg-slate-900 border border-cyan-400/30 shadow-2xl shadow-cyan-500/10 z-10">
+                {savedTemplates.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => handleLoadTemplate(tpl)}
+                    className="w-full flex flex-col items-start gap-0.5 px-3 py-2.5 text-left
+                               hover:bg-cyan-500/10 transition-colors duration-100
+                               border-b border-slate-800/60 last:border-b-0"
+                  >
+                    <span className="text-[11px] font-semibold text-slate-200 truncate w-full">{tpl.name}</span>
+                    <span className="text-[9px] font-mono text-slate-500 truncate w-full">
+                      {tpl.transacao_tipo ?? '—'} · TISS {tpl.version_tiss ?? '—'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
             <button
               type="button"
-              disabled
+              disabled={savedTemplates.length === 0}
+              onClick={() => setShowTemplateMenu((p) => !p)}
               className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-[11px] font-semibold
                          text-cyan-300/80 bg-cyan-500/5 border border-cyan-400/30
                          shadow-[0_0_14px_rgba(34,211,238,0.25)]
-                         cursor-not-allowed opacity-90"
+                         hover:bg-cyan-500/10 hover:text-cyan-200 transition-all duration-150
+                         disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
             >
-              <Sparkles size={12} />
-              Carregar Lista Particular (Em breve)
+              {savedTemplates.length > 0 ? <FolderOpen size={12} /> : <Sparkles size={12} />}
+              {savedTemplates.length > 0
+                ? `Carregar Lista Particular (${savedTemplates.length})`
+                : 'Carregar Lista Particular'}
             </button>
           </div>
         </div>

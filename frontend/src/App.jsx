@@ -19,6 +19,7 @@ import TissViewer       from './pages/Tools/TissViewer';
 import TissIde            from './pages/Tools/TissIde';
 import VersionComparator  from './pages/Tools/VersionComparator';
 import ClassGenerator     from './pages/Tools/ClassGenerator';
+import XmlTemplateBuilder from './pages/Tools/XmlTemplateBuilder';
 import SystemSettings     from './pages/Admin/SystemSettings/SystemSettings';
 import PrivateRoute   from './components/PrivateRoute';
 import AdminRoute     from './components/AdminRoute';
@@ -82,6 +83,9 @@ export default function App() {
         } />
         <Route path="/tools/class-generator" element={
           <PrivateRoute><ClassGenerator /></PrivateRoute>
+        } />
+        <Route path="/tools/xml-template-builder" element={
+          <PrivateRoute><XmlTemplateBuilder /></PrivateRoute>
         } />
       </Routes>
     </SettingsProvider>

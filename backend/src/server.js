@@ -11,6 +11,8 @@ const viewerRoutes     = require('./routes/tools/viewerRoutes');
 const ideRoutes               = require('./routes/tools/ideRoutes');
 const versionComparatorRoutes = require('./routes/tools/versionComparatorRoutes');
 const classGeneratorRoutes    = require('./routes/tools/classGeneratorRoutes');
+const xmlTemplateBuilderRoutes = require('./routes/tools/xmlTemplateBuilderRoutes');
+const xmlTemplateRoutes        = require('./routes/xmlTemplateRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -31,6 +33,8 @@ app.use('/api/tools/viewer',    viewerRoutes);
 app.use('/api/tools/ide',            ideRoutes);
 app.use('/api/tools/version-diff',   versionComparatorRoutes);
 app.use('/api/tools/class-generator', classGeneratorRoutes);
+app.use('/api/tools/xml-template-builder', xmlTemplateBuilderRoutes);
+app.use('/api/xml-templates', xmlTemplateRoutes);
 
 app.listen(PORT, () => {
   console.log(`TISSflow backend rodando na porta ${PORT}`);

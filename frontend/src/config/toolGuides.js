@@ -59,4 +59,14 @@ export const TOOL_GUIDES = {
     ],
     proTip: 'Usuários no plano Free Trial podem visualizar o código normalmente na tela — o download do arquivo completo é um recurso exclusivo dos planos pagos.',
   },
+  'xml-template-builder': {
+    title: 'Construtor de Modelos XML',
+    description: 'Construa modelos XML personalizados a partir do XSD da ANS, ligando e desligando tags opcionais, e salve-os na sua biblioteca particular.',
+    steps: [
+      'Opcionalmente, arraste um XML existente para a área de upload — as tags presentes nele já vêm pré-selecionadas na árvore.',
+      'Selecione a versão TISS e o serviço, dê um nome ao modelo e use os checkboxes na árvore central para ligar ou desligar cada tag opcional.',
+      'Acompanhe o resultado final em tempo real no painel direito e clique em "Salvar na Biblioteca" para guardar o modelo na sua conta.',
+    ],
+    proTip: 'Use a aba "Meus Modelos" para baixar, ativar/desativar ou excluir definitivamente os modelos salvos. Modelos ativos ficam disponíveis para carregar em outras ferramentas, como o Gerador de Classes.',
+  },
 };
