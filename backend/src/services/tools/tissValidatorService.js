@@ -3,7 +3,7 @@
 const crypto      = require('crypto');
 const fs          = require('fs');
 const path        = require('path');
-const { XMLParser } = require('fast-xml-parser');
+const { XMLParser, XMLValidator } = require('fast-xml-parser');
 
 const SCHEMAS_BASE = path.join(__dirname, '..', '..', 'storage', 'schemas');
 
@@ -42,20 +42,49 @@ function schemaExists(versionStr) {
   return fs.existsSync(folder);
 }
 
-// ── Parse raw XML ──────────────────────────────────────────────────────────────
+// ── Layer 0: strict syntax check (must run before lenient PARSER.parse) ────────
 
-function parseRaw(xmlBuffer) {
-  const xmlString = xmlBuffer.toString('utf-8');
+function validateSyntax(xmlString) {
+  const result = XMLValidator.validate(xmlString, { allowBooleanAttributes: true });
+  if (result === true) return [];
+  const { code, msg, line, col } = result.err;
+  return [{
+    layer:       'schema',
+    code:        'xml-syntax-error',
+    description: `XML malformado — ${msg}`,
+    details:     `Linha ${line}, coluna ${col}`,
+  }];
+}
 
+function buildSyntaxFailureResult(fileName, syntaxErrors) {
+  return {
+    valid: false,
+    summary: {
+      arquivo: fileName ?? 'arquivo.xml',
+      versao: '—', lote: '—', operadora: '—', tipoGuia: '—',
+      totalGuias: 0, valorTotal: 'R$ 0,00', tipoTransacao: '—', sequencial: '—',
+    },
+    errors: syntaxErrors,
+    errorSummary: syntaxErrors.map((e) => ({ code: e.code, count: 1, description: e.description })),
+    layers: {
+      schema: { status: 'FAILED',  errorCount: syntaxErrors.length },
+      hash:   { status: 'SKIPPED', errorCount: 0 },
+      audit:  { status: 'SKIPPED', errorCount: 0 },
+    },
+  };
+}
+
+// ── Parse raw XML (lenient — only called after validateSyntax passes) ──────────
+
+function parseRaw(xmlString) {
   let raw;
   try {
     raw = PARSER.parse(xmlString);
   } catch (e) {
     throw Object.assign(new Error('XML mal-formado: ' + e.message), { code: 'PARSE_ERROR' });
   }
-
   const root = raw.mensagemTISS ?? raw;
-  return { root, xmlString };
+  return { root };
 }
 
 // ── Extract envelope metadata ──────────────────────────────────────────────────
@@ -367,7 +396,16 @@ function validateLayer3(root) {
 // ── Public entry point ─────────────────────────────────────────────────────────
 
 exports.validateXml = (xmlBuffer, fileName) => {
-  const { root, xmlString } = parseRaw(xmlBuffer);
+  const xmlString = xmlBuffer.toString('utf-8');
+
+  // ── Layer 0: strict XML well-formedness (catches mismatched tags, illegal chars…)
+  const syntaxErrors = validateSyntax(xmlString);
+  if (syntaxErrors.length > 0) {
+    return buildSyntaxFailureResult(fileName, syntaxErrors);
+  }
+
+  // Syntax is clean — proceed with lenient parser for data extraction
+  const { root } = parseRaw(xmlString);
 
   const cab    = root.cabecalho ?? {};
   const idTx   = cab.identificacaoTransacao ?? {};

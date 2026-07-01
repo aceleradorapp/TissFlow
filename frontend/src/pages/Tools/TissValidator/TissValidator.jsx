@@ -23,9 +23,10 @@ const LAYER_META = {
 };
 
 const LAYER_STATUS_STYLE = {
-  OK:     'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
-  FAILED: 'text-red-600     dark:text-red-400     bg-red-500/10     border-red-500/30',
-  N_A:    'text-slate-500   dark:text-slate-400   bg-slate-500/10   border-slate-500/30',
+  OK:      'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
+  FAILED:  'text-red-600     dark:text-red-400     bg-red-500/10     border-red-500/30',
+  N_A:     'text-slate-500   dark:text-slate-400   bg-slate-500/10   border-slate-500/30',
+  SKIPPED: 'text-slate-400   dark:text-slate-500   bg-slate-500/8    border-slate-500/20',
 };
 
 // ── Dropzone sub-component ─────────────────────────────────────────────────────
@@ -131,7 +132,9 @@ function LayerBadge({ layerKey, layer }) {
       <Icon size={14} className="shrink-0" />
       <span>{label}</span>
       <span className="ml-auto text-xs font-bold">
-        {status === 'OK' ? 'OK' : `${count} erro${count !== 1 ? 's' : ''}`}
+        {status === 'OK'      ? 'OK'
+         : status === 'SKIPPED' ? '— ignorado'
+         : `${count} erro${count !== 1 ? 's' : ''}`}
       </span>
     </div>
   );
