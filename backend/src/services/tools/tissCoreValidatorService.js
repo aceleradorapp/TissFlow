@@ -132,6 +132,96 @@ function validateSyntax(xmlString) {
   return [];
 }
 
+// ── Layer 0.5: Content rules (run ALWAYS, even on syntactically broken XML) ────
+//
+// libxmljs2 cannot parse malformed XML, so XSD validation never runs when the
+// document has mismatched tags. This layer extracts known TISS fields directly
+// from the raw string and validates them against their XSD pattern restrictions,
+// guaranteeing that e.g. a 20-digit CNPJ is reported alongside tag-mismatch errors.
+
+const CONTENT_RULES = [
+  {
+    fields: ['CNPJ', 'numeroCNPJ', 'cnpjContratado', 'cnpjOperadora', 'cnpjEmpresa', 'cnpjPrestador'],
+    pattern: /^[0-9]{14}$/,
+    code: 'xsd-pattern-violation',
+    describe: (field, val) =>
+      `<${field}>: valor "${val}" não corresponde ao padrão obrigatório "[0-9]{14}" (CNPJ deve ter exatamente 14 dígitos).`,
+    fix: (field) =>
+      'O CNPJ deve conter exatamente 14 dígitos numéricos, sem pontuação.',
+  },
+  {
+    fields: ['CPF', 'numeroCPF', 'cpfContratado', 'cpfBeneficiario', 'cpfPrestador'],
+    pattern: /^[0-9]{11}$/,
+    code: 'xsd-pattern-violation',
+    describe: (field, val) =>
+      `<${field}>: valor "${val}" não corresponde ao padrão obrigatório "[0-9]{11}" (CPF deve ter exatamente 11 dígitos).`,
+    fix: () =>
+      'O CPF deve conter exatamente 11 dígitos numéricos, sem pontuação.',
+  },
+  {
+    fields: ['registroANS'],
+    pattern: /^[0-9]{6}$/,
+    code: 'xsd-pattern-violation',
+    describe: (field, val) =>
+      `<${field}>: valor "${val}" não corresponde ao padrão obrigatório "[0-9]{6}" (registroANS deve ter exatamente 6 dígitos).`,
+    fix: () =>
+      'O Registro ANS deve conter exatamente 6 dígitos numéricos.',
+  },
+  {
+    fields: ['hash'],
+    pattern: /^[a-fA-F0-9]{32}$/,
+    code: 'xsd-pattern-violation',
+    describe: (field, val) =>
+      `<${field}>: valor "${val}" não corresponde ao padrão obrigatório "[a-fA-F0-9]{32}" (hash MD5 deve ter 32 caracteres hexadecimais).`,
+    fix: () =>
+      'O hash MD5 deve conter exatamente 32 caracteres hexadecimais (letras a-f e dígitos).',
+  },
+];
+
+function validateContentRules(xmlString) {
+  const errors = [];
+
+  const lineIndex = [0];
+  for (let i = 0; i < xmlString.length; i++) {
+    if (xmlString[i] === '\n') lineIndex.push(i + 1);
+  }
+  function lineOf(pos) {
+    let lo = 0, hi = lineIndex.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (lineIndex[mid] <= pos) lo = mid; else hi = mid - 1;
+    }
+    return lo + 1;
+  }
+
+  for (const rule of CONTENT_RULES) {
+    for (const fieldName of rule.fields) {
+      const re = new RegExp(
+        `<(?:[a-zA-Z][a-zA-Z0-9]*:)?${fieldName}>([^<]*)<\\/(?:[a-zA-Z][a-zA-Z0-9]*:)?${fieldName}>`,
+        'g',
+      );
+      let m;
+      while ((m = re.exec(xmlString)) !== null) {
+        const val = m[1].trim();
+        if (!rule.pattern.test(val)) {
+          const line = lineOf(m.index);
+          errors.push({
+            layer: 'schema',
+            code: rule.code,
+            field: fieldName,
+            line,
+            description: rule.describe(fieldName, val),
+            details: `Linha ${line}`,
+            suggestedFix: rule.fix(fieldName),
+          });
+        }
+      }
+    }
+  }
+
+  return errors;
+}
+
 // ── XSD cache (loaded once per version, then kept in memory) ──────────────────
 
 const xsdCache = new Map();
@@ -571,7 +661,17 @@ function validateAudit(root) {
 
 // ── Build failure result for syntax-stage errors ──────────────────────────────
 
-function buildSyntaxFailureResult(fileName, syntaxErrors) {
+function buildSyntaxFailureResult(fileName, syntaxErrors, contentErrors = []) {
+  const allErrors = [...syntaxErrors, ...contentErrors];
+  const codeCounts = {};
+  for (const e of allErrors) {
+    codeCounts[e.code] = (codeCounts[e.code] ?? 0) + 1;
+  }
+  const errorSummary = Object.entries(codeCounts).map(([code, count]) => ({
+    code,
+    count,
+    description: allErrors.find(e => e.code === code)?.description ?? code,
+  }));
   return {
     valid: false,
     isValid: false,
@@ -580,10 +680,10 @@ function buildSyntaxFailureResult(fileName, syntaxErrors) {
       operadora: '—', tipoGuia: '—', totalGuias: 0,
       valorTotal: 'R$ 0,00', tipoTransacao: '—', sequencial: '—',
     },
-    errors: syntaxErrors,
-    errorSummary: syntaxErrors.map(e => ({ code: e.code, count: 1, description: e.description })),
+    errors: allErrors,
+    errorSummary,
     layers: {
-      schema: { status: 'FAILED',  errorCount: syntaxErrors.length },
+      schema: { status: 'FAILED',  errorCount: allErrors.length },
       hash:   { status: 'SKIPPED', errorCount: 0 },
       audit:  { status: 'SKIPPED', errorCount: 0 },
     },
@@ -601,10 +701,15 @@ function buildSyntaxFailureResult(fileName, syntaxErrors) {
 exports.validate = (xmlBuffer, fileName) => {
   const xmlString = xmlBuffer.toString('utf-8');
 
+  // ── Layer 0.5: Content rules (always — even on broken XML) ───────────────
+  // Must run before syntax check because syntax errors trigger early return.
+  // When XSD cannot run due to malformed XML, this catches known field violations.
+  const contentErrors = validateContentRules(xmlString);
+
   // ── Layer 0: Syntax ──────────────────────────────────────────────────────
   const syntaxErrors = validateSyntax(xmlString);
   if (syntaxErrors.length > 0) {
-    return buildSyntaxFailureResult(fileName, syntaxErrors);
+    return buildSyntaxFailureResult(fileName, syntaxErrors, contentErrors);
   }
 
   // ── Parse (lenient, data-extraction only — syntax is already clean) ──────
@@ -617,7 +722,7 @@ exports.validate = (xmlBuffer, fileName) => {
       layer: 'schema', code: 'xml-syntax-error',
       description: `Falha no parser: ${e.message}`,
       details: null, line: null,
-    }]);
+    }], contentErrors);
   }
 
   const versao = extractVersion(xmlString) || (
