@@ -1,14 +1,85 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, AlertTriangle, CheckCircle2,
-  RefreshCw, Code2, Loader2, FileCode2,
+  ArrowLeft, ArrowRight, AlertTriangle, CheckCircle2,
+  Code2, Loader2, FileCode2, Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '../../../components/DashboardLayout';
 import api from '../../../services/api';
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+// ── Client-side XML syntax linter ─────────────────────────────────────────────
+// Mirrors the backend's collectSyntaxErrors() stack-scanner so the panel
+// updates in real-time without a network round-trip.
+
+function lintXml(xmlString) {
+  if (!xmlString.trim()) return [];
+
+  const errors = [];
+  const stack  = [];
+
+  // Precompute line-start offsets for O(log n) line lookup
+  const lineIndex = [0];
+  for (let i = 0; i < xmlString.length; i++) {
+    if (xmlString[i] === '\n') lineIndex.push(i + 1);
+  }
+  function lineOf(pos) {
+    let lo = 0, hi = lineIndex.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (lineIndex[mid] <= pos) lo = mid; else hi = mid - 1;
+    }
+    return lo + 1;
+  }
+
+  // Matches: comments, PIs, closing tags, opening/self-closing tags
+  const re = /<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<\/([a-zA-Z][a-zA-Z0-9:._-]*)\s*>|<([a-zA-Z][a-zA-Z0-9:._-]*)([^>]*)>/g;
+
+  let m;
+  while ((m = re.exec(xmlString)) !== null) {
+    const closeName = m[1];
+    const openName  = m[2];
+    const attrs     = m[3] ?? '';
+
+    if (!openName && !closeName) continue; // comment or PI
+
+    if (closeName) {
+      if (stack.length === 0) {
+        errors.push({
+          code: 'xml-syntax-error',
+          description: `Tag de fechamento '</${closeName}>' inesperada — nenhum elemento aberto`,
+          details: `Linha ${lineOf(m.index)}`,
+        });
+      } else {
+        const top = stack[stack.length - 1];
+        if (top.name !== closeName) {
+          errors.push({
+            code: 'xml-syntax-error',
+            description: `Fechamento '</${closeName}>' não corresponde à abertura '<${top.name}>' (linha ${top.line})`,
+            details: `Linha ${lineOf(m.index)}`,
+          });
+          // Recovery: pop until we find a matching opener
+          while (stack.length > 0 && stack[stack.length - 1].name !== closeName) stack.pop();
+          if (stack.length > 0) stack.pop();
+        } else {
+          stack.pop();
+        }
+      }
+    } else if (!attrs.trimEnd().endsWith('/')) {
+      stack.push({ name: openName, line: lineOf(m.index) });
+    }
+  }
+
+  for (const t of stack) {
+    errors.push({
+      code: 'xml-syntax-error',
+      description: `Tag '<${t.name}>' foi aberta mas nunca fechada`,
+      details: `Linha ${t.line}`,
+    });
+  }
+
+  return errors;
+}
 
 function extractLine(details = '') {
   return parseInt(details.match(/Linha\s+(\d+)/)?.[1] ?? '1', 10);
@@ -17,10 +88,11 @@ function extractLine(details = '') {
 // ── Component ──────────────────────────────────────────────────────────────────
 
 export default function RawXmlEditor() {
-  const location  = useLocation();
-  const navigate  = useNavigate();
+  const location     = useLocation();
+  const navigate     = useNavigate();
   const textareaRef  = useRef(null);
   const lineNumsRef  = useRef(null);
+  const lintTimerRef = useRef(null);
 
   const {
     xml:      initialXml    = '',
@@ -28,20 +100,38 @@ export default function RawXmlEditor() {
     fileName: initialFile   = 'arquivo.xml',
   } = location.state ?? {};
 
+  // syntaxErrors is kept in its own slice so the linter can update it
+  // independently of the full `errors` list returned by the backend
+  const [syntaxErrors, setSyntaxErrors] = useState(
+    () => initialErrors.filter(e => e.code === 'xml-syntax-error')
+  );
   const [xml,        setXml]       = useState(initialXml);
-  const [errors,     setErrors]    = useState(initialErrors);
   const [validating, setValidating] = useState(false);
   const [activeIdx,  setActiveIdx]  = useState(null);
 
-  // Redirect if accessed directly without state
   useEffect(() => {
     if (!initialXml) navigate('/tools/tiss-validator', { replace: true });
+    return () => clearTimeout(lintTimerRef.current);
   }, []); // eslint-disable-line
 
-  const syntaxErrors = errors.filter(e => e.code === 'xml-syntax-error');
-  const lineCount    = xml.split('\n').length;
+  const lineCount  = xml.split('\n').length;
+  const syntaxClean = syntaxErrors.length === 0;
 
-  // Scroll textarea + line-numbers to a specific line
+  // ── Debounced client-side lint ─────────────────────────────────────────────
+
+  const handleXmlChange = useCallback((e) => {
+    const newXml = e.target.value;
+    setXml(newXml);
+
+    clearTimeout(lintTimerRef.current);
+    lintTimerRef.current = setTimeout(() => {
+      setSyntaxErrors(lintXml(newXml));
+      setActiveIdx(null);
+    }, 450);
+  }, []);
+
+  // ── Scroll helpers ─────────────────────────────────────────────────────────
+
   const scrollToLine = useCallback((lineNum) => {
     const ta = textareaRef.current;
     const ln = lineNumsRef.current;
@@ -53,16 +143,17 @@ export default function RawXmlEditor() {
     ta.focus();
     ta.setSelectionRange(offset, offset + (lines[lineNum - 1]?.length ?? 0));
 
-    // 24px line height (leading-6) + 16px top padding (py-4 = 1rem)
+    // 24px line height + 16px top padding
     const scrollTop = Math.max(0, (lineNum - 1) * 24 - ta.clientHeight / 2 + 16);
     ta.scrollTop = scrollTop;
     if (ln) ln.scrollTop = scrollTop;
   }, [xml]);
 
-  // Sync line-numbers column when user scrolls the textarea
   const handleScroll = useCallback((e) => {
     if (lineNumsRef.current) lineNumsRef.current.scrollTop = e.target.scrollTop;
   }, []);
+
+  // ── Backend validation + navigation ───────────────────────────────────────
 
   async function handleValidate() {
     setValidating(true);
@@ -76,9 +167,8 @@ export default function RawXmlEditor() {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
-      setErrors(data.errors ?? []);
-
       const remainingSyntax = (data.errors ?? []).filter(e => e.code === 'xml-syntax-error');
+      setSyntaxErrors(remainingSyntax);
 
       if (remainingSyntax.length === 0) {
         if (data.valid) {
@@ -107,6 +197,19 @@ export default function RawXmlEditor() {
   }
 
   if (!initialXml) return null;
+
+  // ── Toolbar button — changes when linter clears all errors ─────────────────
+  const advanceButton = syntaxClean
+    ? {
+        label:     'Avançar para o Editor de Faturamento',
+        Icon:      ArrowRight,
+        className: 'bg-violet-600 hover:bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.4)]',
+      }
+    : {
+        label:     'Validar Sintaxe',
+        Icon:      Zap,
+        className: 'bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]',
+      };
 
   return (
     <DashboardLayout>
@@ -138,10 +241,18 @@ export default function RawXmlEditor() {
             </div>
           </div>
 
-          {syntaxErrors.length > 0 && (
+          {/* Live error counter badge */}
+          {syntaxClean ? (
+            <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold
+                             bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400
+                             border border-emerald-300 dark:border-emerald-700/50 transition-all">
+              <CheckCircle2 size={11} />
+              Estrutura OK
+            </span>
+          ) : (
             <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold
                              bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400
-                             border border-red-300 dark:border-red-700/50">
+                             border border-red-300 dark:border-red-700/50 transition-all">
               <AlertTriangle size={11} />
               {syntaxErrors.length} erro{syntaxErrors.length !== 1 ? 's' : ''} de estrutura
             </span>
@@ -151,25 +262,27 @@ export default function RawXmlEditor() {
         <button
           onClick={handleValidate}
           disabled={validating}
-          className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-4 py-1.5 rounded-xl
-                     bg-emerald-600 hover:bg-emerald-500 text-white transition-all
-                     disabled:opacity-60 disabled:cursor-wait
-                     shadow-[0_0_10px_rgba(16,185,129,0.3)]"
+          className={[
+            'shrink-0 flex items-center gap-1.5 text-xs font-semibold px-4 py-1.5 rounded-xl',
+            'text-white transition-all disabled:opacity-60 disabled:cursor-wait',
+            advanceButton.className,
+          ].join(' ')}
         >
           {validating
             ? <Loader2 size={13} className="animate-spin" />
-            : <RefreshCw size={13} />
+            : <advanceButton.Icon size={13} />
           }
-          Validar Sintaxe
+          {validating ? 'Validando…' : advanceButton.label}
         </button>
       </div>
 
       {/* ── Description ── */}
       <div className="mb-4">
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          O XML possui erros de estrutura de tags (abertura/fechamento incompatíveis). Corrija diretamente no editor abaixo e clique em
-          {' '}<span className="font-semibold text-emerald-500">Validar Sintaxe</span> para reprocessar.
-          Quando a estrutura estiver correta, o sistema abrirá o Editor de Blocos automaticamente.
+          O XML possui erros de estrutura de tags (abertura/fechamento incompatíveis). Corrija diretamente no editor —
+          o painel lateral atualiza em tempo real conforme você digita.
+          Quando a estrutura estiver correta, clique em{' '}
+          <span className="font-semibold text-violet-400">Avançar para o Editor de Faturamento</span>.
         </p>
       </div>
 
@@ -179,7 +292,6 @@ export default function RawXmlEditor() {
 
         {/* ── Code editor ── */}
         <div className="flex flex-col rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 min-h-0">
-          {/* Editor header */}
           <div className="flex items-center justify-between px-4 py-2
                           bg-slate-100 dark:bg-slate-900
                           border-b border-slate-200 dark:border-slate-800 shrink-0">
@@ -196,7 +308,6 @@ export default function RawXmlEditor() {
 
           {/* Line numbers + textarea */}
           <div className="relative flex flex-1 overflow-hidden bg-slate-950">
-            {/* Line numbers column */}
             <div
               ref={lineNumsRef}
               className="shrink-0 w-11 overflow-hidden select-none
@@ -209,11 +320,10 @@ export default function RawXmlEditor() {
               ))}
             </div>
 
-            {/* Editable textarea */}
             <textarea
               ref={textareaRef}
               value={xml}
-              onChange={e => setXml(e.target.value)}
+              onChange={handleXmlChange}
               onScroll={handleScroll}
               spellCheck={false}
               autoCapitalize="off"
@@ -221,11 +331,11 @@ export default function RawXmlEditor() {
               className="flex-1 resize-none bg-slate-950 text-slate-200
                          focus:outline-none overflow-auto font-mono"
               style={{
-                fontSize:    '11px',
-                lineHeight:  '24px',
-                padding:     '16px 16px 16px 12px',
-                tabSize:     2,
-                whiteSpace:  'pre',
+                fontSize:   '11px',
+                lineHeight: '24px',
+                padding:    '16px 16px 16px 12px',
+                tabSize:    2,
+                whiteSpace: 'pre',
               }}
             />
           </div>
@@ -234,58 +344,62 @@ export default function RawXmlEditor() {
         {/* ── Error list sidebar ── */}
         <div className="flex flex-col gap-2 overflow-y-auto min-h-0">
           <div className="flex items-center gap-2 px-1 shrink-0">
-            <AlertTriangle size={14} className="text-amber-500" />
+            {syntaxClean
+              ? <CheckCircle2 size={14} className="text-emerald-500" />
+              : <AlertTriangle size={14} className="text-amber-500" />
+            }
             <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
-              {syntaxErrors.length === 0
-                ? 'Nenhum erro de estrutura'
+              {syntaxClean
+                ? 'Estrutura correta!'
                 : `${syntaxErrors.length} ponto${syntaxErrors.length !== 1 ? 's' : ''} a corrigir`}
             </span>
           </div>
 
-          {syntaxErrors.length === 0 && (
-            <div className="flex flex-col items-center gap-2 py-8 px-4
+          {syntaxClean ? (
+            <div className="flex flex-col items-center gap-3 py-8 px-4
                             rounded-2xl border border-emerald-700/30 bg-emerald-900/10">
-              <CheckCircle2 size={28} className="text-emerald-400" />
-              <p className="text-xs text-emerald-400 font-medium text-center">
-                Estrutura XML sem erros de sintaxe.
-                <br />Clique em Validar Sintaxe para prosseguir.
+              <CheckCircle2 size={32} className="text-emerald-400" />
+              <p className="text-xs text-emerald-400 font-medium text-center leading-relaxed">
+                Todos os erros de estrutura foram corrigidos.
+                <br /><br />
+                Clique em{' '}
+                <span className="font-bold text-violet-400">Avançar</span>{' '}
+                para confirmar e abrir o Editor de Faturamento.
               </p>
             </div>
+          ) : (
+            syntaxErrors.map((err, idx) => {
+              const lineNum  = extractLine(err.details);
+              const isActive = activeIdx === idx;
+
+              return (
+                <button
+                  key={`${err.description}-${idx}`}
+                  onClick={() => { setActiveIdx(idx); scrollToLine(lineNum); }}
+                  className={[
+                    'w-full text-left rounded-xl border px-3 py-2.5 transition-all',
+                    'focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500',
+                    isActive
+                      ? 'border-amber-500/60 bg-amber-900/20 shadow-[0_0_8px_rgba(217,119,6,0.2)]'
+                      : 'border-slate-700/50 bg-slate-900/60 hover:border-amber-700/40 hover:bg-amber-900/10',
+                  ].join(' ')}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="shrink-0 text-xs font-bold font-mono px-2 py-0.5 rounded-full
+                                     bg-amber-600/20 text-amber-400 border border-amber-600/30">
+                      L{lineNum}
+                    </span>
+                    <span className="text-xs text-slate-500 truncate">
+                      {err.details}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    {err.description}
+                  </p>
+                </button>
+              );
+            })
           )}
-
-          {syntaxErrors.map((err, idx) => {
-            const lineNum   = extractLine(err.details);
-            const isActive  = activeIdx === idx;
-
-            return (
-              <button
-                key={idx}
-                onClick={() => { setActiveIdx(idx); scrollToLine(lineNum); }}
-                className={[
-                  'w-full text-left rounded-xl border px-3 py-2.5 transition-all',
-                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500',
-                  isActive
-                    ? 'border-amber-500/60 bg-amber-900/20 shadow-[0_0_8px_rgba(217,119,6,0.2)]'
-                    : 'border-slate-700/50 bg-slate-900/60 hover:border-amber-700/40 hover:bg-amber-900/10',
-                ].join(' ')}
-              >
-                {/* Line chip + details */}
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="shrink-0 text-xs font-bold font-mono px-2 py-0.5 rounded-full
-                                   bg-amber-600/20 text-amber-400 border border-amber-600/30">
-                    L{lineNum}
-                  </span>
-                  <span className="text-xs text-slate-500 dark:text-slate-500 truncate">
-                    {err.details}
-                  </span>
-                </div>
-                {/* Description */}
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {err.description}
-                </p>
-              </button>
-            );
-          })}
         </div>
       </div>
     </DashboardLayout>
