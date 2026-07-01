@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronDown, ChevronRight, AlertCircle,
   Search, X, Zap, Save, ArrowLeft, Loader2,
+  Wand2, CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '../../../components/DashboardLayout';
@@ -305,6 +306,260 @@ function XmlBlock({ node, valueMap, onValueChange, onClearError, errorTagSet, ex
   );
 }
 
+// ── Remediation Wizard ────────────────────────────────────────────────────────
+
+const HASH_AUTO_CODES  = new Set(['hash-integrity-validation', 'missing-hash-element']);
+const STRUCTURAL_CODES = new Set([
+  'missing-root-element', 'unknown-tiss-version', 'hash-body-not-extractable',
+  'missing-transaction-body', 'missing-cabecalho', 'missing-padrao', 'missing-epilogo',
+]);
+const LAYER_LABELS = { schema: 'Estrutura XML', hash: 'Integridade do arquivo', audit: 'Auditoria matemática' };
+
+function WizardOverlay({ onClose, children }) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4
+                 bg-slate-950/75 backdrop-blur-sm"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <style>{`@keyframes wiz-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}`}</style>
+      <div
+        className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-2xl shadow-2xl
+                   border border-slate-200 dark:border-slate-800 overflow-hidden"
+        style={{ animation: 'wiz-in 0.22s ease-out' }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function RemediationWizard({ errorQueue, tree, valueMap, onValueChange, onClearError, onFixHash, fixingHash, onClose }) {
+  const [step,         setStep]         = useState(0);
+  const [resolvedSteps, setResolvedSteps] = useState(() => new Set());
+  const [done,         setDone]         = useState(false);
+
+  const total  = errorQueue.length;
+  const error  = errorQueue[step] ?? null;
+  const pct    = done ? 100 : Math.round((step / total) * 100);
+
+  const targetTags  = ERROR_TAG_MAP[error?.code] ?? [];
+  const targetNodes = targetTags.map((t) => findNodeByLocalName(tree, t)).filter(Boolean);
+  const isHashAuto   = HASH_AUTO_CODES.has(error?.code);
+  const isStructural = STRUCTURAL_CODES.has(error?.code) || (targetNodes.length === 0 && !isHashAuto);
+  const canApply     = !isHashAuto && !isStructural;
+
+  // Scoped error set — only the current step's error highlighted in red
+  const stepETS = {};
+  if (error) for (const tag of targetTags) stepETS[tag] = [error];
+
+  function goNext(resolved) {
+    if (resolved) setResolvedSteps((p) => new Set([...p, step]));
+    if (step + 1 >= total) setDone(true);
+    else setStep((p) => p + 1);
+  }
+
+  function handleApply() {
+    for (const tag of targetTags) onClearError(tag);
+    goNext(true);
+  }
+
+  async function handleAutoFixHash() {
+    const ok = await onFixHash();
+    if (ok) goNext(true);
+  }
+
+  // ── Completion screen ──────────────────────────────────────────────────────────
+  if (done) {
+    const resolvedCount = resolvedSteps.size;
+    const skippedCount  = total - resolvedCount;
+    return (
+      <WizardOverlay onClose={onClose}>
+        <div className="flex flex-col items-center text-center py-10 px-8">
+          <div className="w-20 h-20 rounded-full bg-emerald-500/10 border-2 border-emerald-500/25
+                          flex items-center justify-center mb-5 shrink-0">
+            <CheckCircle2 size={38} className="text-emerald-500" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-1">
+            Sessão de Correção Concluída
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+            {resolvedCount === total
+              ? 'Todos os erros foram tratados nesta sessão!'
+              : `${resolvedCount} de ${total} erro${total !== 1 ? 's' : ''} resolvido${resolvedCount !== 1 ? 's' : ''}`
+                + (skippedCount > 0 ? ` · ${skippedCount} pulado${skippedCount !== 1 ? 's' : ''}` : '')}
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center mb-8">
+            {errorQueue.map((e, i) => {
+              const ok = resolvedSteps.has(i);
+              return (
+                <span key={i} className={[
+                  'flex items-center gap-1.5 text-[10px] font-semibold px-2.5 py-1 rounded-full border',
+                  ok
+                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-300 dark:border-slate-700',
+                ].join(' ')}>
+                  {ok ? <CheckCircle2 size={10} /> : <ChevronRight size={10} />}
+                  {e.code}
+                </span>
+              );
+            })}
+          </div>
+          <button
+            onClick={onClose}
+            className="px-6 py-2.5 rounded-xl text-sm font-semibold text-white
+                       bg-blue-600 hover:bg-blue-700 transition-colors"
+          >
+            Concluir e Ir para o Editor
+          </button>
+        </div>
+      </WizardOverlay>
+    );
+  }
+
+  // ── Active step ───────────────────────────────────────────────────────────────
+  return (
+    <WizardOverlay onClose={onClose}>
+      {/* Header */}
+      <div className="px-6 pt-5 pb-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Wand2 size={15} className="text-violet-500 shrink-0" />
+            <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+              Assistente de Correção
+            </span>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+              Erro {step + 1} de {total}
+            </span>
+            <button onClick={onClose}
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+              <X size={15} />
+            </button>
+          </div>
+        </div>
+        <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+          <div className="h-full rounded-full bg-violet-500 transition-all duration-500 ease-out"
+               style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+
+      {/* Body — two-column */}
+      <div
+        key={step}
+        className="grid grid-cols-2 divide-x divide-slate-200 dark:divide-slate-800 min-h-[220px]"
+        style={{ animation: 'wiz-in 0.22s ease-out' }}
+      >
+        {/* Left: humanized explanation */}
+        <div className="p-5 flex flex-col gap-3">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="w-4 h-4 rounded-full bg-red-500/10 border border-red-500/25
+                             flex items-center justify-center shrink-0">
+              <AlertCircle size={9} className="text-red-500" />
+            </span>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-red-500">
+              {LAYER_LABELS[error.layer] ?? error.layer}
+            </span>
+          </div>
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+            {ERROR_HINTS[error.code] ?? error.description}
+          </p>
+          {error.details && (
+            <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 break-all
+                           bg-slate-50 dark:bg-slate-800/70 rounded-lg px-3 py-2
+                           border border-slate-200 dark:border-slate-700/60">
+              {error.details}
+            </p>
+          )}
+          {isStructural && !isHashAuto && (
+            <p className="mt-auto text-xs italic text-slate-400 dark:text-slate-500">
+              Este erro requer intervenção estrutural — use o editor completo abaixo.
+            </p>
+          )}
+        </div>
+
+        {/* Right: input / quick action */}
+        <div className="p-5 flex flex-col justify-center gap-3">
+          {isHashAuto ? (
+            <div className="flex flex-col items-center text-center gap-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                O hash MD5 pode ser recalculado automaticamente com base no conteúdo atual do XML.
+              </p>
+              <button
+                onClick={handleAutoFixHash}
+                disabled={fixingHash}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white
+                           bg-violet-600 hover:bg-violet-500 transition-all duration-200
+                           shadow-[0_0_14px_rgba(139,92,246,0.45)]
+                           hover:shadow-[0_0_24px_rgba(139,92,246,0.7)]
+                           disabled:opacity-50 disabled:cursor-wait disabled:shadow-none"
+              >
+                {fixingHash
+                  ? <Loader2 size={14} className="animate-spin" />
+                  : <Zap size={14} />}
+                Auto-Corrigir Hash MD5
+              </button>
+            </div>
+          ) : isStructural ? (
+            <div className="flex flex-col items-center text-center gap-3">
+              <div className="w-11 h-11 rounded-full bg-slate-100 dark:bg-slate-800
+                              border border-slate-200 dark:border-slate-700
+                              flex items-center justify-center">
+                <AlertCircle size={20} className="text-slate-400" />
+              </div>
+              <p className="text-xs text-slate-400 dark:text-slate-500">
+                Use o editor abaixo para corrigir a estrutura do arquivo.
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2 overflow-y-auto max-h-48">
+              <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                Campo a corrigir
+              </span>
+              {targetNodes.map((node) => (
+                <XmlField
+                  key={node.id}
+                  node={node}
+                  valueMap={valueMap}
+                  onValueChange={onValueChange}
+                  onClearError={() => {}}
+                  errorTagSet={stepETS}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex items-center justify-between px-6 py-3.5
+                      border-t border-slate-200 dark:border-slate-800">
+        <button
+          onClick={() => goNext(false)}
+          className="flex items-center gap-1 text-xs font-medium
+                     text-slate-400 dark:text-slate-500
+                     hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+        >
+          <ChevronRight size={13} />
+          Pular este erro
+        </button>
+        {canApply && (
+          <button
+            onClick={handleApply}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl
+                       text-xs font-semibold text-white
+                       bg-blue-600 hover:bg-blue-700 transition-colors"
+          >
+            Aplicar e Avançar
+            <ChevronRight size={13} />
+          </button>
+        )}
+      </div>
+    </WizardOverlay>
+  );
+}
+
 // ── Main editor ────────────────────────────────────────────────────────────────
 
 export default function XmlEditor() {
@@ -343,6 +598,8 @@ export default function XmlEditor() {
   const [revalidating, setRevalidating] = useState(false);
   const [fixingHash,   setFixingHash]   = useState(false);
   const [revalResult,  setRevalResult]  = useState(null);
+  const [wizardOpen,   setWizardOpen]   = useState(false);
+  const [wizardErrors, setWizardErrors] = useState([]);
 
   const errorTagSet = useMemo(() => buildErrorTagSet(currentErrors), [currentErrors]);
 
@@ -391,7 +648,7 @@ export default function XmlEditor() {
 
       if (data.layers?.hash?.status === 'OK') {
         toast.info('Hash MD5 já está correto!');
-        return;
+        return true;
       }
 
       // Extract computed hash from error details: "Declarado: X | Calculado: Y"
@@ -406,15 +663,19 @@ export default function XmlEditor() {
             (e) => e.code !== 'hash-integrity-validation' && e.code !== 'missing-hash-element'
           ));
           toast.success(`Hash MD5 atualizado: ${computedHash.slice(0, 8)}…`);
+          return true;
         } else {
           toast.warning('Tag <hash> não encontrada no XML — verifique o <epilogo>.');
+          return false;
         }
       } else {
         toast.error('Não foi possível extrair o hash correto. Corrija outros campos primeiro.');
+        return false;
       }
     } catch (err) {
       console.error('[fixHash]', err);
       toast.error('Erro ao recalcular o hash.');
+      return false;
     } finally {
       setFixingHash(false);
     }
@@ -548,6 +809,24 @@ export default function XmlEditor() {
             )}
           </div>
 
+          {/* Remediation Wizard */}
+          <button
+            onClick={() => { setWizardErrors([...currentErrors]); setWizardOpen(true); }}
+            disabled={busy || errorCount === 0}
+            title={errorCount === 0 ? 'Nenhum erro ativo para corrigir' : 'Abrir assistente de correção passo a passo'}
+            className={[
+              'flex items-center gap-1.5 shrink-0 text-xs font-semibold',
+              'px-3 py-1.5 rounded-xl text-white transition-all duration-200',
+              'disabled:opacity-40 disabled:cursor-not-allowed',
+              errorCount > 0
+                ? 'bg-violet-600 hover:bg-violet-500 shadow-[0_0_10px_rgba(139,92,246,0.3)] hover:shadow-[0_0_18px_rgba(139,92,246,0.55)]'
+                : 'bg-slate-400',
+            ].join(' ')}
+          >
+            <Wand2 size={12} />
+            Assistente
+          </button>
+
           {/* Fix Hash */}
           <button
             onClick={handleFixHash}
@@ -645,6 +924,20 @@ export default function XmlEditor() {
           </div>
         )}
       </div>
+
+      {/* ── Remediation Wizard modal ───────────────────────────────────────────── */}
+      {wizardOpen && wizardErrors.length > 0 && (
+        <RemediationWizard
+          errorQueue={wizardErrors}
+          tree={tree}
+          valueMap={valueMap}
+          onValueChange={onValueChange}
+          onClearError={clearErrorsByTag}
+          onFixHash={handleFixHash}
+          fixingHash={fixingHash}
+          onClose={() => setWizardOpen(false)}
+        />
+      )}
     </DashboardLayout>
   );
 }
