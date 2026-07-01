@@ -152,10 +152,18 @@ function defaultExpandedIds(node, result = new Set()) {
 
 // ── XmlField ──────────────────────────────────────────────────────────────────
 
-function XmlField({ node, valueMap, onValueChange, errorTagSet, compact }) {
+function XmlField({ node, valueMap, onValueChange, onClearError, errorTagSet, compact }) {
   const errors   = errorTagSet[node.localName] ?? [];
   const hasError = errors.length > 0;
   const value    = valueMap[node.id] ?? node.textContent ?? '';
+
+  function handleChange(e) {
+    const newValue = e.target.value;
+    onValueChange(node.id, newValue);
+    if (hasError && newValue.trim()) {
+      onClearError(node.localName);
+    }
+  }
 
   return (
     <div className={compact ? 'mb-2' : 'mb-3'}>
@@ -166,7 +174,7 @@ function XmlField({ node, valueMap, onValueChange, errorTagSet, compact }) {
       <input
         type="text"
         value={value}
-        onChange={(e) => onValueChange(node.id, e.target.value)}
+        onChange={handleChange}
         spellCheck={false}
         className={[
           'w-full text-xs font-mono px-2.5 py-1.5 rounded-lg transition-all duration-150',
@@ -193,7 +201,7 @@ function XmlField({ node, valueMap, onValueChange, errorTagSet, compact }) {
 
 // ── XmlBlock (recursive accordion) ────────────────────────────────────────────
 
-function XmlBlock({ node, valueMap, onValueChange, errorTagSet, expanded, toggleExpand }) {
+function XmlBlock({ node, valueMap, onValueChange, onClearError, errorTagSet, expanded, toggleExpand }) {
   if (node.isLeaf) {
     return (
       <div style={{ marginLeft: `${node.depth * 14}px` }}>
@@ -201,6 +209,7 @@ function XmlBlock({ node, valueMap, onValueChange, errorTagSet, expanded, toggle
           node={node}
           valueMap={valueMap}
           onValueChange={onValueChange}
+          onClearError={onClearError}
           errorTagSet={errorTagSet}
         />
       </div>
@@ -248,6 +257,7 @@ function XmlBlock({ node, valueMap, onValueChange, errorTagSet, expanded, toggle
               node={{ ...child, depth: 0 }}
               valueMap={valueMap}
               onValueChange={onValueChange}
+              onClearError={onClearError}
               errorTagSet={errorTagSet}
               expanded={expanded}
               toggleExpand={toggleExpand}
@@ -288,19 +298,29 @@ export default function XmlEditor() {
     }
   }
 
-  const [valueMap,    setValueMap]    = useState({});
-  const [expanded,    setExpanded]    = useState(() =>
+  const [valueMap,      setValueMap]      = useState({});
+  const [currentErrors, setCurrentErrors] = useState(initialErrors);
+  const [expanded,      setExpanded]      = useState(() =>
     treeRef.current ? defaultExpandedIds(treeRef.current) : new Set()
   );
-  const [search,      setSearch]      = useState('');
+  const [search,       setSearch]       = useState('');
   const [revalidating, setRevalidating] = useState(false);
-  const [fixingHash,  setFixingHash]  = useState(false);
-  const [revalResult, setRevalResult] = useState(null);
+  const [fixingHash,   setFixingHash]   = useState(false);
+  const [revalResult,  setRevalResult]  = useState(null);
 
-  const errorTagSet = useMemo(() => buildErrorTagSet(initialErrors), [initialErrors]);
+  const errorTagSet = useMemo(() => buildErrorTagSet(currentErrors), [currentErrors]);
 
   const onValueChange = useCallback((id, value) => {
     setValueMap((prev) => ({ ...prev, [id]: value }));
+  }, []);
+
+  const clearErrorsByTag = useCallback((localName) => {
+    setCurrentErrors((prev) => {
+      const codesToClear = Object.entries(ERROR_TAG_MAP)
+        .filter(([, tags]) => tags.includes(localName))
+        .map(([code]) => code);
+      return prev.filter((e) => !codesToClear.includes(e.code));
+    });
   }, []);
 
   const toggleExpand = useCallback((id) => {
@@ -346,6 +366,9 @@ export default function XmlEditor() {
         const hashNode = findNodeByLocalName(treeRef.current, 'hash');
         if (hashNode) {
           setValueMap((prev) => ({ ...prev, [hashNode.id]: computedHash }));
+          setCurrentErrors((prev) => prev.filter(
+            (e) => e.code !== 'hash-integrity-validation' && e.code !== 'missing-hash-element'
+          ));
           toast.success(`Hash MD5 atualizado: ${computedHash.slice(0, 8)}…`);
         } else {
           toast.warning('Tag <hash> não encontrada no XML — verifique o <epilogo>.');
@@ -377,6 +400,7 @@ export default function XmlEditor() {
       });
 
       setRevalResult(data);
+      setCurrentErrors(data.errors ?? []);
 
       if (data.valid) {
         toast.success('Arquivo válido! Redirecionando para o relatório…');
@@ -400,7 +424,7 @@ export default function XmlEditor() {
 
   const tree       = treeRef.current;
   const busy       = revalidating || fixingHash;
-  const errorCount = initialErrors.length;
+  const errorCount = currentErrors.length;
 
   // ── Parse error (malformed XML) ───────────────────────────────────────────────
   if (!tree) {
@@ -447,23 +471,18 @@ export default function XmlEditor() {
             <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 truncate max-w-44 shrink-0">
               {fileName}
             </span>
-            {errorCount > 0 && !revalResult && (
+            {errorCount > 0 ? (
               <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md
-                               bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                               bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20
+                               transition-all duration-300">
                 {errorCount} erro{errorCount !== 1 ? 's' : ''}
               </span>
-            )}
-            {revalResult && (
-              <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${
-                revalResult.valid
-                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-                  : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
-              }`}>
-                {revalResult.valid
-                  ? '✓ Válido'
-                  : `${revalResult.errors.length} erro${revalResult.errors.length !== 1 ? 's' : ''} restante${revalResult.errors.length !== 1 ? 's' : ''}`}
+            ) : revalResult?.valid ? (
+              <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-md
+                               bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                ✓ Válido
               </span>
-            )}
+            ) : null}
           </div>
 
           {/* Search */}
@@ -509,15 +528,18 @@ export default function XmlEditor() {
             Corrigir Hash MD5
           </button>
 
-          {/* Save & Revalidate */}
+          {/* Save & Revalidate — glows green when all errors are resolved */}
           <button
             onClick={handleSaveRevalidate}
             disabled={busy}
-            className="flex items-center gap-1.5 shrink-0 text-xs font-semibold
-                       px-3 py-1.5 rounded-xl text-white
-                       bg-blue-600 hover:bg-blue-700
-                       transition-all duration-200
-                       disabled:opacity-50 disabled:cursor-wait"
+            className={[
+              'flex items-center gap-1.5 shrink-0 text-xs font-semibold',
+              'px-3 py-1.5 rounded-xl text-white transition-all duration-200',
+              'disabled:opacity-50 disabled:cursor-wait',
+              errorCount === 0
+                ? 'bg-emerald-600 hover:bg-emerald-700 shadow-[0_0_12px_rgba(16,185,129,0.45)] hover:shadow-[0_0_22px_rgba(16,185,129,0.7)]'
+                : 'bg-blue-600 hover:bg-blue-700',
+            ].join(' ')}
           >
             {revalidating ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
             Salvar e Revalidar
@@ -561,6 +583,7 @@ export default function XmlEditor() {
                       node={node}
                       valueMap={valueMap}
                       onValueChange={onValueChange}
+                      onClearError={clearErrorsByTag}
                       errorTagSet={errorTagSet}
                       compact
                     />
@@ -578,6 +601,7 @@ export default function XmlEditor() {
               node={tree}
               valueMap={valueMap}
               onValueChange={onValueChange}
+              onClearError={clearErrorsByTag}
               errorTagSet={errorTagSet}
               expanded={expanded}
               toggleExpand={toggleExpand}
