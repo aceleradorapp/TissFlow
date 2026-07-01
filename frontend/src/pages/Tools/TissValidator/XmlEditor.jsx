@@ -260,7 +260,7 @@ function XmlBlock({ node, valueMap, onValueChange, onClearError, errorTagSet, ex
               : 'hover:bg-slate-100 dark:hover:bg-slate-800/60',
           ].join(' ')}
         >
-          <span className="shrink-0 text-slate-400 dark:text-slate-500">
+          <span className="shrink-0 text-amber-400 dark:text-amber-400">
             {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
           </span>
           <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 truncate">
@@ -885,22 +885,22 @@ export default function XmlEditor() {
           <div className="flex items-center gap-2 mt-2.5">
             <button
               onClick={() => setExpanded(collectAllIds(tree))}
-              className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg
-                         text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700/60
-                         hover:text-slate-700 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-600
-                         hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all duration-150"
+              className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg
+                         text-slate-200 border border-slate-700 bg-slate-900/80
+                         hover:text-white hover:bg-slate-800 hover:border-slate-600
+                         transition-colors duration-150"
             >
-              <FolderOpen size={12} />
+              <FolderOpen size={12} className="text-amber-400" />
               Expandir Tudo
             </button>
             <button
               onClick={() => setExpanded(new Set())}
-              className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg
-                         text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700/60
-                         hover:text-slate-700 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-600
-                         hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all duration-150"
+              className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg
+                         text-slate-200 border border-slate-700 bg-slate-900/80
+                         hover:text-white hover:bg-slate-800 hover:border-slate-600
+                         transition-colors duration-150"
             >
-              <Folder size={12} />
+              <Folder size={12} className="text-amber-400" />
               Recolher Tudo
             </button>
           </div>
