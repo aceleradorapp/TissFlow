@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, AlertTriangle, CheckCircle2,
-  Code2, Loader2, FileCode2, Zap,
+  Code2, Loader2, FileCode2, Zap, PauseCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '../../../components/DashboardLayout';
@@ -399,6 +399,19 @@ export default function RawXmlEditor() {
                 </button>
               );
             })
+          )}
+
+          {/* Suspended-layers notice — always visible while syntax errors exist */}
+          {!syntaxClean && (
+            <div className="mt-2 flex items-start gap-2.5 px-3 py-2.5 rounded-xl
+                            border border-slate-700/40 bg-slate-900/50">
+              <PauseCircle size={13} className="text-slate-500 shrink-0 mt-0.5" />
+              <p className="text-[11px] text-slate-500 leading-relaxed">
+                <span className="font-semibold text-slate-400">Integridade MD5</span> e{' '}
+                <span className="font-semibold text-slate-400">Auditoria Matemática</span>{' '}
+                suspensas por erro de estrutura. Corrija as tags acima para que os dados internos sejam auditados.
+              </p>
+            </div>
           )}
         </div>
       </div>

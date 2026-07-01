@@ -121,11 +121,15 @@ function ValidatorDropzone({ onFile, loading }) {
 
 // ── Layer status badge ─────────────────────────────────────────────────────────
 
-function LayerBadge({ layerKey, layer }) {
+function LayerBadge({ layerKey, layer, hasSyntaxError }) {
   const { label, Icon } = LAYER_META[layerKey] ?? { label: layerKey, Icon: ShieldAlert };
   const status  = layer?.status ?? 'N_A';
   const style   = LAYER_STATUS_STYLE[status] ?? LAYER_STATUS_STYLE.N_A;
   const count   = layer?.errorCount ?? 0;
+
+  const skippedLabel = hasSyntaxError
+    ? '— suspenso por erro de estrutura'
+    : '— ignorado';
 
   return (
     <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium ${style}`}>
@@ -133,7 +137,7 @@ function LayerBadge({ layerKey, layer }) {
       <span>{label}</span>
       <span className="ml-auto text-xs font-bold">
         {status === 'OK'      ? 'OK'
-         : status === 'SKIPPED' ? '— ignorado'
+         : status === 'SKIPPED' ? skippedLabel
          : `${count} erro${count !== 1 ? 's' : ''}`}
       </span>
     </div>
@@ -157,6 +161,7 @@ function SummaryCard({ result, fileName }) {
   const headColor = isValid ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
 
   const { summary, layers, errors, errorSummary } = result;
+  const hasSyntaxError = (errors ?? []).some(e => e.code === 'xml-syntax-error');
 
   const META_ROWS = [
     { label: 'Arquivo',          value: summary?.arquivo    },
@@ -209,7 +214,7 @@ function SummaryCard({ result, fileName }) {
             </p>
             <div className="flex flex-col gap-2">
               {Object.entries(layers ?? {}).map(([key, layer]) => (
-                <LayerBadge key={key} layerKey={key} layer={layer} />
+                <LayerBadge key={key} layerKey={key} layer={layer} hasSyntaxError={hasSyntaxError} />
               ))}
             </div>
           </div>
