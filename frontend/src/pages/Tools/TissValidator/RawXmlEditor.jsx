@@ -93,6 +93,8 @@ export default function RawXmlEditor() {
   const textareaRef  = useRef(null);
   const lineNumsRef  = useRef(null);
   const lintTimerRef = useRef(null);
+  // Always holds the latest xml value — avoids stale closure inside handleValidate's setTimeout
+  const xmlRef = useRef(initialXml);
 
   const {
     xml:      initialXml    = '',
@@ -121,6 +123,7 @@ export default function RawXmlEditor() {
 
   const handleXmlChange = useCallback((e) => {
     const newXml = e.target.value;
+    xmlRef.current = newXml; // keep ref in sync before any state flush
     setXml(newXml);
 
     clearTimeout(lintTimerRef.current);
@@ -156,10 +159,14 @@ export default function RawXmlEditor() {
   // ── Backend validation + navigation ───────────────────────────────────────
 
   async function handleValidate() {
+    // Capture the edited XML from the ref — always reflects the latest keystroke,
+    // even if a React state flush is still pending when the button is clicked.
+    const currentXml = xmlRef.current;
+
     setValidating(true);
     setActiveIdx(null);
     try {
-      const blob = new Blob([xml], { type: 'application/xml' });
+      const blob = new Blob([currentXml], { type: 'application/xml' });
       const form = new FormData();
       form.append('xml_file', new File([blob], initialFile));
 
@@ -182,11 +189,9 @@ export default function RawXmlEditor() {
         ? 'Arquivo válido! Retornando para o relatório…'
         : 'Estrutura corrigida! Retornando ao validador para os próximos passos…',
       );
-      setTimeout(() => {
-        navigate('/tools/tiss-validator', {
-          state: { result: data, xml, fileName: initialFile, fixedXml: xml },
-        });
-      }, 800);
+      navigate('/tools/tiss-validator', {
+        state: { result: data, xml: currentXml, fileName: initialFile, fixedXml: currentXml },
+      });
     } catch {
       toast.error('Erro ao revalidar o arquivo. Tente novamente.');
     } finally {

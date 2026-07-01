@@ -475,19 +475,28 @@ export default function TissValidator() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // State can be pre-populated when returning from XmlEditor with a fixed XML
   const [loading,     setLoading]     = useState(false);
-  const [result,      setResult]      = useState(() => location.state?.result   ?? null);
-  const [fileName,    setFileName]    = useState(() => location.state?.fileName ?? '');
-  const [rawXml,      setRawXml]      = useState(() => location.state?.xml      ?? '');
-  const [fixedXml,    setFixedXml]    = useState(() => location.state?.fixedXml ?? null);
+  const [result,      setResult]      = useState(null);
+  const [fileName,    setFileName]    = useState('');
+  const [rawXml,      setRawXml]      = useState('');
+  const [fixedXml,    setFixedXml]    = useState(null);
   const [isGuideOpen, setIsGuideOpen] = useState(false);
   const [exporting,   setExporting]   = useState(false);
 
-  // Clear location.state after reading so a page refresh doesn't re-apply it
+  // Runs every time location.key changes — i.e., every time the user arrives at
+  // this page via navigate(), whether on first mount or returning from raw-editor
+  // / XmlEditor. Reading from location.state here (not in useState lazy initializers)
+  // guarantees we always pick up the freshest data regardless of remount behaviour.
   useEffect(() => {
-    if (location.state) window.history.replaceState({}, '', location.pathname);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!location.state) return;
+    const { result: r, xml: x, fileName: f, fixedXml: fx } = location.state;
+    if (r)    setResult(r);
+    if (x)    setRawXml(x);
+    if (f)    setFileName(f);
+    setFixedXml(fx ?? null);
+    // Drop state from browser history so a hard refresh doesn't re-apply it
+    window.history.replaceState({}, '', location.pathname);
+  }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFile = useCallback(async (file) => {
     if (!file) return;
