@@ -90,17 +90,18 @@ function extractLine(details = '') {
 export default function RawXmlEditor() {
   const location     = useLocation();
   const navigate     = useNavigate();
-  const textareaRef  = useRef(null);
-  const lineNumsRef  = useRef(null);
-  const lintTimerRef = useRef(null);
-  // Always holds the latest xml value — avoids stale closure inside handleValidate's setTimeout
-  const xmlRef = useRef(initialXml);
 
   const {
     xml:      initialXml    = '',
     errors:   initialErrors = [],
     fileName: initialFile   = 'arquivo.xml',
   } = location.state ?? {};
+
+  const textareaRef  = useRef(null);
+  const lineNumsRef  = useRef(null);
+  const lintTimerRef = useRef(null);
+  // Always holds the latest xml value — avoids stale closure in handleValidate
+  const xmlRef = useRef(initialXml);
 
   // syntaxErrors is kept in its own slice so the linter can update it
   // independently of the full `errors` list returned by the backend
