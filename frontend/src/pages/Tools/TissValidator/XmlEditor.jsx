@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronDown, ChevronRight, AlertCircle,
   Search, X, Zap, Save, ArrowLeft, Loader2,
-  Wand2, CheckCircle2,
+  Wand2, CheckCircle2, FolderOpen, Folder,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import DashboardLayout from '../../../components/DashboardLayout';
@@ -163,6 +163,16 @@ function defaultExpandedIds(node, result = new Set()) {
   if (node.depth <= 1) {
     result.add(node.id);
     node.children.forEach((c) => defaultExpandedIds(c, result));
+  }
+  return result;
+}
+
+// ── Collect ALL non-leaf IDs (used by Expand All) ─────────────────────────────
+
+function collectAllIds(node, result = new Set()) {
+  if (!node.isLeaf) {
+    result.add(node.id);
+    for (const child of node.children) collectAllIds(child, result);
   }
   return result;
 }
@@ -872,6 +882,28 @@ export default function XmlEditor() {
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             Edite os campos diretamente. Campos com falha estão destacados em vermelho com dica de correção.
           </p>
+          <div className="flex items-center gap-2 mt-2.5">
+            <button
+              onClick={() => setExpanded(collectAllIds(tree))}
+              className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg
+                         text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700/60
+                         hover:text-slate-700 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-600
+                         hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all duration-150"
+            >
+              <FolderOpen size={12} />
+              Expandir Tudo
+            </button>
+            <button
+              onClick={() => setExpanded(new Set())}
+              className="flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-lg
+                         text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700/60
+                         hover:text-slate-700 dark:hover:text-white hover:border-slate-300 dark:hover:border-slate-600
+                         hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all duration-150"
+            >
+              <Folder size={12} />
+              Recolher Tudo
+            </button>
+          </div>
         </div>
 
         {/* ── Search results (flat list) ──────────────────────────────────────── */}
