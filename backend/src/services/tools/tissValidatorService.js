@@ -252,21 +252,23 @@ function auditProcedimentos(procedimentosExecutados, guiaLabel) {
   for (const p of procs) {
     const seq   = p.sequencialItem ?? '?';
     const code  = p.procedimento?.codigoProcedimento ?? p.codigoProcedimento ?? '—';
-    const qtd   = Number(p.quantidade ?? 1);
+    // TISS SP-SADT uses quantidadeExecutada; fallback to quantidade for other guia types
+    const qtd   = Number(p.quantidadeExecutada ?? p.quantidade ?? 1);
     const vUnit = Number(p.valorUnitario ?? 0);
-    const vTot  = Number(p.valorTotal ?? (qtd * vUnit));
+    const fator = Number(p.fatorReducaoAcrescimo ?? 1);
 
-    if (vUnit === 0 && vTot === 0) continue; // no values to audit
+    if (vUnit === 0) continue; // nothing to audit
+    if (p.valorTotal == null) continue; // declared total absent — can't compare
 
-    const expected = parseFloat((qtd * vUnit).toFixed(2));
-    const diff     = Math.abs(expected - vTot);
+    const calculado = (qtd * vUnit * fator).toFixed(2);
+    const declarado = parseFloat(p.valorTotal).toFixed(2);
 
-    if (diff > EPSILON) {
+    if (calculado !== declarado) {
       errors.push({
         layer: 'audit',
         code:  'audit-procedure-math-mismatch',
-        description: `${guiaLabel} · Proc. seq ${seq} (TUSS ${code}): Qtd ${qtd} × Val.Unit R$ ${vUnit.toFixed(2)} = R$ ${expected.toFixed(2)}, mas <valorTotal> declara R$ ${vTot.toFixed(2)}.`,
-        details: `Diferença: R$ ${diff.toFixed(2)}`,
+        description: `${guiaLabel} · Proc. seq ${seq} (TUSS ${code}): Qtd ${qtd} × Val.Unit R$ ${vUnit.toFixed(2)} × Fator ${fator.toFixed(4)} = R$ ${calculado}, mas <valorTotal> declara R$ ${declarado}.`,
+        details: `Diferença: R$ ${Math.abs(parseFloat(calculado) - parseFloat(declarado)).toFixed(2)}`,
       });
     }
   }
@@ -284,19 +286,19 @@ function auditOtrasDespesas(outrasDespesasNode, guiaLabel) {
     const code  = svc.codigoProcedimento ?? svc.codigoDespesa ?? '—';
     const qtd   = Number(svc.quantidadeExecutada ?? svc.quantidade ?? 1);
     const vUnit = Number(svc.valorUnitario ?? 0);
-    const vTot  = svc.valorTotal != null ? Number(svc.valorTotal) : qtd * vUnit;
 
-    if (vUnit === 0 && vTot === 0) continue;
+    if (vUnit === 0) continue;
+    if (svc.valorTotal == null) continue;
 
-    const expected = parseFloat((qtd * vUnit).toFixed(2));
-    const diff     = Math.abs(expected - vTot);
+    const calculado = (qtd * vUnit).toFixed(2);
+    const declarado = parseFloat(svc.valorTotal).toFixed(2);
 
-    if (diff > EPSILON) {
+    if (calculado !== declarado) {
       errors.push({
         layer: 'audit',
         code:  'audit-expense-math-mismatch',
-        description: `${guiaLabel} · Despesa seq ${seq} (cód ${code}): Qtd ${qtd} × Val.Unit R$ ${vUnit.toFixed(2)} = R$ ${expected.toFixed(2)}, mas <valorTotal> declara R$ ${vTot.toFixed(2)}.`,
-        details: `Diferença: R$ ${diff.toFixed(2)}`,
+        description: `${guiaLabel} · Despesa seq ${seq} (cód ${code}): Qtd ${qtd} × Val.Unit R$ ${vUnit.toFixed(2)} = R$ ${calculado}, mas <valorTotal> declara R$ ${declarado}.`,
+        details: `Diferença: R$ ${Math.abs(parseFloat(calculado) - parseFloat(declarado)).toFixed(2)}`,
       });
     }
   }

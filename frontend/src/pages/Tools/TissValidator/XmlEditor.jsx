@@ -75,10 +75,26 @@ function buildErrorTagSet(errors = []) {
   const map = {};
   for (const e of errors) {
     for (const tag of (ERROR_TAG_MAP[e.code] ?? [])) {
-      (map[tag] ??= []).push(e);
+      const arr = (map[tag] ??= []);
+      // One hint per error code per tag — avoids repeating the same message N times
+      if (!arr.some((x) => x.code === e.code)) arr.push(e);
     }
   }
   return map;  // { [localName]: error[] }
+}
+
+// Collect unique errors (by code) across an entire subtree for tooltip display
+function collectNodeErrors(node, ets) {
+  const seen = new Set();
+  const results = [];
+  function walk(n) {
+    for (const e of (ets[n.localName] ?? [])) {
+      if (!seen.has(e.code)) { seen.add(e.code); results.push(e); }
+    }
+    for (const child of n.children) walk(child);
+  }
+  walk(node);
+  return results;
 }
 
 function nodeHasAnyError(node, ets) {
@@ -216,38 +232,58 @@ function XmlBlock({ node, valueMap, onValueChange, onClearError, errorTagSet, ex
     );
   }
 
-  const isOpen   = expanded.has(node.id);
-  const hasError = nodeHasAnyError(node, errorTagSet);
+  const isOpen     = expanded.has(node.id);
+  const hasError   = nodeHasAnyError(node, errorTagSet);
+  const nodeErrors = hasError ? collectNodeErrors(node, errorTagSet) : [];
 
   return (
     <div style={{ marginLeft: `${node.depth * 14}px` }} className="mb-0.5">
-      <button
-        onClick={() => toggleExpand(node.id)}
-        className={[
-          'flex items-center gap-2 w-full text-left px-2.5 py-1.5 rounded-lg',
-          'transition-all duration-150',
-          hasError
-            ? 'hover:bg-red-500/8 dark:hover:bg-red-900/15'
-            : 'hover:bg-slate-100 dark:hover:bg-slate-800/60',
-        ].join(' ')}
-      >
-        <span className="shrink-0 text-slate-400 dark:text-slate-500">
-          {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-        </span>
-        <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-200">
-          {node.localName}
-        </span>
-        <span className="text-[10px] text-slate-400 dark:text-slate-500">
-          ({node.children.length})
-        </span>
-        {hasError && (
-          <span className="ml-auto flex items-center gap-1 text-[10px] font-semibold
-                           text-red-500 dark:text-red-400">
-            <AlertCircle size={10} />
-            erro
+      <div className="flex items-center">
+        <button
+          onClick={() => toggleExpand(node.id)}
+          className={[
+            'flex items-center gap-2 flex-1 min-w-0 text-left px-2.5 py-1.5 rounded-lg',
+            'transition-all duration-150',
+            hasError
+              ? 'hover:bg-red-500/8 dark:hover:bg-red-900/15'
+              : 'hover:bg-slate-100 dark:hover:bg-slate-800/60',
+          ].join(' ')}
+        >
+          <span className="shrink-0 text-slate-400 dark:text-slate-500">
+            {isOpen ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
           </span>
+          <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-200 truncate">
+            {node.localName}
+          </span>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">
+            ({node.children.length})
+          </span>
+        </button>
+
+        {/* Error badge with hover tooltip — sits outside the button to avoid nesting issues */}
+        {hasError && (
+          <div className="relative group/errbadge shrink-0 ml-1 px-1.5 py-1">
+            <span className="flex items-center gap-1 text-[10px] font-semibold
+                             text-red-500 dark:text-red-400 cursor-help select-none">
+              <AlertCircle size={10} />
+              erro
+            </span>
+            <div className="pointer-events-none absolute right-0 top-full mt-1 z-50 w-72
+                            opacity-0 group-hover/errbadge:opacity-100 transition-opacity duration-150
+                            rounded-xl shadow-xl border border-slate-700/60
+                            bg-slate-900 dark:bg-slate-800 p-3 flex flex-col gap-1.5">
+              <p className="text-[9px] font-bold uppercase tracking-wider text-slate-500 mb-0.5">
+                Erros neste bloco
+              </p>
+              {nodeErrors.map((e, i) => (
+                <p key={i} className="text-[10px] text-slate-200 leading-relaxed">
+                  {ERROR_HINTS[e.code] ?? e.description}
+                </p>
+              ))}
+            </div>
+          </div>
         )}
-      </button>
+      </div>
 
       {isOpen && (
         <div className="mt-0.5 pl-3 border-l border-slate-200 dark:border-slate-700/50 ml-3 py-1.5">
