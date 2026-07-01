@@ -567,18 +567,34 @@ export default function TissValidator() {
                   Novo Arquivo
                 </button>
 
-                {/* Visualizar e Corrigir — only when file has errors */}
+                {/* Action button — two variants depending on error type */}
                 {!result.valid && rawXml && (
-                  <button
-                    onClick={() => navigate('/tools/tiss-validator/editor', {
-                      state: { xml: rawXml, errors: result.errors, fileName },
-                    })}
-                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl
-                               bg-amber-500 hover:bg-amber-400 text-white transition-all"
-                  >
-                    <Wand2 size={13} />
-                    Visualizar e Corrigir
-                  </button>
+                  result.errors.some(e => e.code === 'xml-syntax-error') ? (
+                    // Syntax errors → raw text editor to fix malformed tags first
+                    <button
+                      onClick={() => navigate('/tools/tiss-validator/raw-editor', {
+                        state: { xml: rawXml, errors: result.errors, fileName },
+                      })}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl
+                                 bg-amber-600 hover:bg-amber-500 text-white transition-all
+                                 shadow-[0_0_10px_rgba(217,119,6,0.35)]"
+                    >
+                      <AlertTriangle size={13} />
+                      Corrigir Estrutura do Arquivo
+                    </button>
+                  ) : (
+                    // Syntax valid, business-rule errors → block editor
+                    <button
+                      onClick={() => navigate('/tools/tiss-validator/editor', {
+                        state: { xml: rawXml, errors: result.errors, fileName },
+                      })}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl
+                                 bg-amber-500 hover:bg-amber-400 text-white transition-all"
+                    >
+                      <Wand2 size={13} />
+                      Visualizar e Corrigir
+                    </button>
+                  )
                 )}
 
                 {/* Download fixed XML — only when editor returned a corrected file */}

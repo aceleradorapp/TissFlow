@@ -22,6 +22,7 @@ import ClassGenerator     from './pages/Tools/ClassGenerator';
 import XmlTemplateBuilder from './pages/Tools/XmlTemplateBuilder';
 import TissValidator      from './pages/Tools/TissValidator';
 import XmlEditor          from './pages/Tools/TissValidator/XmlEditor';
+import RawXmlEditor       from './pages/Tools/TissValidator/RawXmlEditor';
 import SystemSettings     from './pages/Admin/SystemSettings/SystemSettings';
 import PrivateRoute   from './components/PrivateRoute';
 import AdminRoute     from './components/AdminRoute';
@@ -100,6 +101,9 @@ export default function App() {
         } />
         <Route path="/tools/tiss-validator/editor" element={
           <PrivateRoute><XmlEditor /></PrivateRoute>
+        } />
+        <Route path="/tools/tiss-validator/raw-editor" element={
+          <PrivateRoute><RawXmlEditor /></PrivateRoute>
         } />
       </Routes>
     </SettingsProvider>

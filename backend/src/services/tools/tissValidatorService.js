@@ -42,18 +42,99 @@ function schemaExists(versionStr) {
   return fs.existsSync(folder);
 }
 
-// ── Layer 0: strict syntax check (must run before lenient PARSER.parse) ────────
+// ── Layer 0: strict syntax check — multi-error stack scanner ──────────────────
+// XMLValidator.validate() stops at the first error. We use a lightweight
+// stack-based tag scanner to accumulate ALL mismatched-tag errors in one pass,
+// then fall back to XMLValidator for other malformations (illegal chars, etc.).
+
+function collectSyntaxErrors(xmlString) {
+  const errors = [];
+  const stack  = [];
+
+  // Precompute line-start offsets for O(log n) line lookup
+  const lineIndex = [0];
+  for (let i = 0; i < xmlString.length; i++) {
+    if (xmlString[i] === '\n') lineIndex.push(i + 1);
+  }
+  function lineOf(pos) {
+    let lo = 0, hi = lineIndex.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (lineIndex[mid] <= pos) lo = mid; else hi = mid - 1;
+    }
+    return lo + 1;
+  }
+
+  // Matches: comments, PIs, closing tags, opening/self-closing tags
+  const re = /<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<\/([a-zA-Z][a-zA-Z0-9:._-]*)\s*>|<([a-zA-Z][a-zA-Z0-9:._-]*)([^>]*)>/g;
+
+  let m;
+  while ((m = re.exec(xmlString)) !== null) {
+    const closeName = m[1];
+    const openName  = m[2];
+    const attrs     = m[3] ?? '';
+
+    if (!openName && !closeName) continue; // comment or PI — skip
+
+    if (closeName) {
+      if (stack.length === 0) {
+        errors.push({
+          layer: 'schema', code: 'xml-syntax-error',
+          description: `Tag de fechamento '</${closeName}>' inesperada — nenhum elemento aberto`,
+          details: `Linha ${lineOf(m.index)}`,
+        });
+      } else {
+        const top = stack[stack.length - 1];
+        if (top.name !== closeName) {
+          errors.push({
+            layer: 'schema', code: 'xml-syntax-error',
+            description: `Fechamento '</${closeName}>' não corresponde à abertura '<${top.name}>' (linha ${top.line})`,
+            details: `Linha ${lineOf(m.index)}`,
+          });
+          // Recovery: pop until we find a matching opener so scanning can continue
+          while (stack.length > 0 && stack[stack.length - 1].name !== closeName) stack.pop();
+          if (stack.length > 0) stack.pop();
+        } else {
+          stack.pop();
+        }
+      }
+    } else if (!attrs.trimEnd().endsWith('/')) {
+      // Non-self-closing opening tag
+      stack.push({ name: openName, line: lineOf(m.index) });
+    }
+    // Self-closing (<tag/> or <tag attr/>): nothing pushed
+  }
+
+  // Unclosed tags still on the stack
+  for (const t of stack) {
+    errors.push({
+      layer: 'schema', code: 'xml-syntax-error',
+      description: `Tag '<${t.name}>' foi aberta mas nunca fechada`,
+      details: `Linha ${t.line}`,
+    });
+  }
+
+  return errors;
+}
 
 function validateSyntax(xmlString) {
+  // 1. Full multi-pass scanner (catches ALL mismatched tags)
+  const tagErrors = collectSyntaxErrors(xmlString);
+  if (tagErrors.length > 0) return tagErrors;
+
+  // 2. XMLValidator fallback — catches malformations the scanner won't see
+  //    (illegal characters, bad XML declaration, duplicate attributes, etc.)
   const result = XMLValidator.validate(xmlString, { allowBooleanAttributes: true });
-  if (result === true) return [];
-  const { code, msg, line, col } = result.err;
-  return [{
-    layer:       'schema',
-    code:        'xml-syntax-error',
-    description: `XML malformado — ${msg}`,
-    details:     `Linha ${line}, coluna ${col}`,
-  }];
+  if (result !== true) {
+    const { msg, line, col } = result.err;
+    return [{
+      layer: 'schema', code: 'xml-syntax-error',
+      description: `XML malformado — ${msg}`,
+      details: `Linha ${line}, coluna ${col}`,
+    }];
+  }
+
+  return [];
 }
 
 function buildSyntaxFailureResult(fileName, syntaxErrors) {
