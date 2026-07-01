@@ -22,6 +22,10 @@ const ERROR_TAG_MAP = {
   'audit-procedure-math-mismatch': ['valorTotal', 'quantidadeExecutada', 'quantidade', 'valorUnitario'],
   'audit-expense-math-mismatch':   ['valorTotal', 'quantidadeExecutada', 'valorUnitario'],
   'audit-total-sum-mismatch':      ['valorTotalGeral'],
+  // XSD schema errors — most carry e.field directly (see buildErrorTagSet);
+  // these fallbacks handle codes that don't have a specific field
+  'xsd-missing-element':           ['mensagemTISS'],
+  'xsd-sequence-violation':        ['mensagemTISS'],
 };
 
 const ERROR_HINTS = {
@@ -33,6 +37,16 @@ const ERROR_HINTS = {
   'audit-procedure-math-mismatch': 'Quantidade × ValorUnitário deve ser igual ao ValorTotal declarado no procedimento.',
   'audit-expense-math-mismatch':   'Quantidade × ValorUnitário deve ser igual ao ValorTotal da despesa.',
   'audit-total-sum-mismatch':      'A soma das rubricas (procedimentos + taxas + materiais + medicamentos + OPME + diárias) deve ser igual ao valorTotalGeral.',
+  // XSD errors — generic hints (description/suggestedFix from the error object take precedence in the tooltip)
+  'xsd-pattern-violation':         'O valor não corresponde ao formato exigido pelo schema XSD da ANS.',
+  'xsd-maxlength-violation':       'O valor excede o tamanho máximo permitido pelo schema XSD.',
+  'xsd-minlength-violation':       'O valor é menor que o tamanho mínimo exigido pelo schema XSD.',
+  'xsd-enumeration-violation':     'O valor não pertence à tabela de domínio homologada pela ANS.',
+  'xsd-type-violation':            'O valor não é compatível com o tipo de dado definido no schema XSD.',
+  'xsd-unexpected-element':        'Este elemento não é esperado nesta posição conforme o schema TISS.',
+  'xsd-missing-element':           'Falta um elemento filho obrigatório conforme o schema TISS.',
+  'xsd-sequence-violation':        'A ordem dos elementos não segue a sequência definida no schema TISS.',
+  'xsd-schema-violation':          'Violação de schema XSD. Verifique o campo conforme o schema TISS.',
 };
 
 // ── DOM → React tree ───────────────────────────────────────────────────────────
@@ -75,9 +89,16 @@ function buildDomTree(rootEl) {
 function buildErrorTagSet(errors = []) {
   const map = {};
   for (const e of errors) {
+    // XSD errors carry a `field` property (the element's local name from libxmljs2).
+    // Use it directly so any unknown field name is highlighted without a static map entry.
+    if (e.field) {
+      const arr = (map[e.field] ??= []);
+      // Dedup by code+field so two different occurrences of the same field are merged
+      if (!arr.some((x) => x.code === e.code && x.field === e.field && x.line === e.line)) arr.push(e);
+    }
+    // Legacy: error code → explicit tag names mapping (covers non-XSD codes)
     for (const tag of (ERROR_TAG_MAP[e.code] ?? [])) {
       const arr = (map[tag] ??= []);
-      // One hint per error code per tag — avoids repeating the same message N times
       if (!arr.some((x) => x.code === e.code)) arr.push(e);
     }
   }
@@ -218,7 +239,7 @@ function XmlField({ node, valueMap, onValueChange, onClearError, errorTagSet, co
                         bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/50">
           <AlertCircle size={11} className="text-red-500 shrink-0 mt-0.5" />
           <p className="text-[10px] leading-relaxed text-red-700 dark:text-red-300">
-            {ERROR_HINTS[e.code] ?? e.description}
+            {e.suggestedFix ?? ERROR_HINTS[e.code] ?? e.description}
           </p>
         </div>
       ))}
@@ -288,7 +309,7 @@ function XmlBlock({ node, valueMap, onValueChange, onClearError, errorTagSet, ex
               </p>
               {nodeErrors.map((e, i) => (
                 <p key={i} className="text-[10px] text-slate-200 leading-relaxed">
-                  {ERROR_HINTS[e.code] ?? e.description}
+                  {e.suggestedFix ?? ERROR_HINTS[e.code] ?? e.description}
                 </p>
               ))}
             </div>

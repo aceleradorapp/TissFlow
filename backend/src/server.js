@@ -15,6 +15,7 @@ const xmlTemplateBuilderRoutes = require('./routes/tools/xmlTemplateBuilderRoute
 const xmlTemplateRoutes        = require('./routes/xmlTemplateRoutes');
 const validatorRoutes          = require('./routes/tools/validatorRoutes');
 const v1PublicRoutes           = require('./routes/v1PublicRoutes');
+const internalRoutes           = require('./routes/internalRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -39,6 +40,7 @@ app.use('/api/tools/xml-template-builder', xmlTemplateBuilderRoutes);
 app.use('/api/xml-templates', xmlTemplateRoutes);
 app.use('/api/tools/validator', validatorRoutes);
 app.use('/api/v1/public',      v1PublicRoutes);
+app.use('/api/v1/internal',    internalRoutes);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`TISSflow backend rodando na porta ${PORT}`);
