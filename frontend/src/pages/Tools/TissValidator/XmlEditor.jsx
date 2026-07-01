@@ -19,7 +19,7 @@ const ERROR_TAG_MAP = {
   'hash-integrity-validation':     ['hash'],
   'missing-hash-element':          ['hash'],
   'hash-body-not-extractable':     ['prestadorParaOperadora', 'operadoraParaPrestador'],
-  'audit-procedure-math-mismatch': ['valorTotal', 'quantidade', 'valorUnitario'],
+  'audit-procedure-math-mismatch': ['valorTotal', 'quantidadeExecutada', 'quantidade', 'valorUnitario'],
   'audit-expense-math-mismatch':   ['valorTotal', 'quantidadeExecutada', 'valorUnitario'],
   'audit-total-sum-mismatch':      ['valorTotalGeral'],
 };
@@ -316,6 +316,19 @@ function XmlBlock({ node, valueMap, onValueChange, onClearError, errorTagSet, ex
   );
 }
 
+// ── Math-error parser (used by wizard left panel) ─────────────────────────────
+// Parses backend description: "… Qtd N × Val.Unit R$ U × Fator F = R$ S, mas … declara R$ D."
+
+function parseMathError(description) {
+  if (!description) return null;
+  const qtd       = description.match(/Qtd\s+([\d.]+)/)?.[1];
+  const unit      = description.match(/Val\.Unit\s+R\$\s*([\d.]+)/)?.[1];
+  const fator     = description.match(/Fator\s+([\d.]+)/)?.[1] ?? null;
+  const suggested = description.match(/=\s+R\$\s*([\d.]+)/)?.[1];
+  if (!qtd || !unit || !suggested) return null;
+  return { qtd, unit, fator, suggested };
+}
+
 // ── Remediation Wizard ────────────────────────────────────────────────────────
 
 const HASH_AUTO_CODES  = new Set(['hash-integrity-validation', 'missing-hash-element']);
@@ -358,6 +371,9 @@ function RemediationWizard({ errorQueue, tree, valueMap, onValueChange, onClearE
   const isHashAuto   = HASH_AUTO_CODES.has(error?.code);
   const isStructural = STRUCTURAL_CODES.has(error?.code) || (targetNodes.length === 0 && !isHashAuto);
   const canApply     = !isHashAuto && !isStructural;
+  const isMathAudit  = error?.code === 'audit-procedure-math-mismatch' || error?.code === 'audit-expense-math-mismatch';
+  const mathInfo     = isMathAudit ? parseMathError(error.description) : null;
+  const valorTotalNode = targetNodes.find((n) => n.localName === 'valorTotal') ?? null;
 
   // Scoped error set — only the current step's error highlighted in red
   const stepETS = {};
@@ -475,13 +491,66 @@ function RemediationWizard({ errorQueue, tree, valueMap, onValueChange, onClearE
           <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
             {ERROR_HINTS[error.code] ?? error.description}
           </p>
-          {error.details && (
+          {error.details && !isMathAudit && (
             <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 break-all
                            bg-slate-50 dark:bg-slate-800/70 rounded-lg px-3 py-2
                            border border-slate-200 dark:border-slate-700/60">
               {error.details}
             </p>
           )}
+
+          {/* Math audit context: breakdown + clickable suggestion */}
+          {isMathAudit && mathInfo && (
+            <div className="flex flex-col gap-2">
+              <div className="text-[11px] bg-slate-50 dark:bg-slate-800/60 rounded-lg px-3 py-2
+                              border border-slate-200 dark:border-slate-700/60 flex flex-wrap gap-x-2 gap-y-1 items-center">
+                <span className="text-slate-500 dark:text-slate-400">Qtd:</span>
+                <span className="font-mono font-semibold text-slate-800 dark:text-slate-100">{mathInfo.qtd}</span>
+                <span className="text-slate-400">×</span>
+                <span className="text-slate-500 dark:text-slate-400">Val. Unit.:</span>
+                <span className="font-mono font-semibold text-slate-800 dark:text-slate-100">R$ {mathInfo.unit}</span>
+                {mathInfo.fator && mathInfo.fator !== '1.0000' && mathInfo.fator !== '1' && (
+                  <>
+                    <span className="text-slate-400">×</span>
+                    <span className="text-slate-500 dark:text-slate-400">Fator:</span>
+                    <span className="font-mono font-semibold text-slate-800 dark:text-slate-100">{mathInfo.fator}</span>
+                  </>
+                )}
+                {error.details && (
+                  <>
+                    <span className="w-full border-t border-slate-200 dark:border-slate-700/50 my-0.5" />
+                    <span className="text-slate-500 dark:text-slate-400 font-mono">{error.details}</span>
+                  </>
+                )}
+              </div>
+
+              {valorTotalNode && (
+                <button
+                  type="button"
+                  onClick={() => onValueChange(valorTotalNode.id, mathInfo.suggested)}
+                  className="flex items-center gap-2.5 w-full text-left px-3 py-2.5 rounded-lg
+                             bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40
+                             hover:bg-amber-100 dark:hover:bg-amber-900/35 transition-colors group"
+                >
+                  <span className="text-base shrink-0">💡</span>
+                  <div className="min-w-0">
+                    <span className="block text-[9px] font-bold uppercase tracking-wider
+                                     text-amber-700 dark:text-amber-400 mb-0.5">
+                      Valor total sugerido
+                    </span>
+                    <span className="text-sm font-semibold font-mono text-amber-800 dark:text-amber-300">
+                      R$ {mathInfo.suggested}
+                    </span>
+                  </div>
+                  <span className="ml-auto text-[9px] text-amber-600 dark:text-amber-500 self-center
+                                   opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shrink-0">
+                    preencher →
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
+
           {isStructural && !isHashAuto && (
             <p className="mt-auto text-xs italic text-slate-400 dark:text-slate-500">
               Este erro requer intervenção estrutural — use o editor completo abaixo.
