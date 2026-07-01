@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, ArrowRight, AlertTriangle, CheckCircle2,
+  ArrowLeft, AlertTriangle, CheckCircle2,
   Code2, Loader2, FileCode2, Zap, PauseCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -127,7 +127,7 @@ export default function RawXmlEditor() {
     lintTimerRef.current = setTimeout(() => {
       setSyntaxErrors(lintXml(newXml));
       setActiveIdx(null);
-    }, 450);
+    }, 150);
   }, []);
 
   // ── Scroll helpers ─────────────────────────────────────────────────────────
@@ -170,25 +170,23 @@ export default function RawXmlEditor() {
       const remainingSyntax = (data.errors ?? []).filter(e => e.code === 'xml-syntax-error');
       setSyntaxErrors(remainingSyntax);
 
-      if (remainingSyntax.length === 0) {
-        if (data.valid) {
-          toast.success('XML válido! Retornando para o relatório…');
-          setTimeout(() => {
-            navigate('/tools/tiss-validator', {
-              state: { result: data, xml, fileName: initialFile, fixedXml: xml },
-            });
-          }, 800);
-        } else {
-          toast.success('Estrutura corrigida! Abrindo editor de blocos para os demais erros…');
-          setTimeout(() => {
-            navigate('/tools/tiss-validator/editor', {
-              state: { xml, errors: data.errors, fileName: initialFile },
-            });
-          }, 800);
-        }
-      } else {
+      if (remainingSyntax.length > 0) {
         toast.warning(`${remainingSyntax.length} erro(s) de estrutura ainda presente(s). Continue corrigindo.`);
+        return;
       }
+
+      // Syntax is clean — always return to the main validator.
+      // TissValidator will show the correct next action based on remaining errors
+      // (business errors → "Visualizar e Corrigir"; fully valid → success state).
+      toast.success(data.valid
+        ? 'Arquivo válido! Retornando para o relatório…'
+        : 'Estrutura corrigida! Retornando ao validador para os próximos passos…',
+      );
+      setTimeout(() => {
+        navigate('/tools/tiss-validator', {
+          state: { result: data, xml, fileName: initialFile, fixedXml: xml },
+        });
+      }, 800);
     } catch {
       toast.error('Erro ao revalidar o arquivo. Tente novamente.');
     } finally {
@@ -197,19 +195,6 @@ export default function RawXmlEditor() {
   }
 
   if (!initialXml) return null;
-
-  // ── Toolbar button — changes when linter clears all errors ─────────────────
-  const advanceButton = syntaxClean
-    ? {
-        label:     'Avançar para o Editor de Faturamento',
-        Icon:      ArrowRight,
-        className: 'bg-violet-600 hover:bg-violet-500 shadow-[0_0_12px_rgba(139,92,246,0.4)]',
-      }
-    : {
-        label:     'Validar Sintaxe',
-        Icon:      Zap,
-        className: 'bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]',
-      };
 
   return (
     <DashboardLayout>
@@ -262,17 +247,12 @@ export default function RawXmlEditor() {
         <button
           onClick={handleValidate}
           disabled={validating}
-          className={[
-            'shrink-0 flex items-center gap-1.5 text-xs font-semibold px-4 py-1.5 rounded-xl',
-            'text-white transition-all disabled:opacity-60 disabled:cursor-wait',
-            advanceButton.className,
-          ].join(' ')}
+          className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-4 py-1.5 rounded-xl
+                     text-white transition-all disabled:opacity-60 disabled:cursor-wait
+                     bg-emerald-600 hover:bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.3)]"
         >
-          {validating
-            ? <Loader2 size={13} className="animate-spin" />
-            : <advanceButton.Icon size={13} />
-          }
-          {validating ? 'Validando…' : advanceButton.label}
+          {validating ? <Loader2 size={13} className="animate-spin" /> : <Zap size={13} />}
+          {validating ? 'Validando…' : 'Validar Sintaxe'}
         </button>
       </div>
 
@@ -282,7 +262,8 @@ export default function RawXmlEditor() {
           O XML possui erros de estrutura de tags (abertura/fechamento incompatíveis). Corrija diretamente no editor —
           o painel lateral atualiza em tempo real conforme você digita.
           Quando a estrutura estiver correta, clique em{' '}
-          <span className="font-semibold text-violet-400">Avançar para o Editor de Faturamento</span>.
+          <span className="font-semibold text-emerald-400">⚡ Validar Sintaxe</span>{' '}
+          para confirmar e retornar ao relatório analítico.
         </p>
       </div>
 
@@ -363,8 +344,8 @@ export default function RawXmlEditor() {
                 Todos os erros de estrutura foram corrigidos.
                 <br /><br />
                 Clique em{' '}
-                <span className="font-bold text-violet-400">Avançar</span>{' '}
-                para confirmar e abrir o Editor de Faturamento.
+                <span className="font-bold text-emerald-300">⚡ Validar Sintaxe</span>{' '}
+                para confirmar e retornar ao relatório analítico.
               </p>
             </div>
           ) : (

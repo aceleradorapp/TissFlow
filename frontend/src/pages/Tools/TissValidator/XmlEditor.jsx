@@ -669,10 +669,21 @@ export default function XmlEditor() {
   const { xml: initialXml = '', errors: initialErrors = [], fileName = 'arquivo.xml' } =
     location.state ?? {};
 
-  // Redirect if reached without state
+  // Guard: redirect if reached without state or if XML still has structural tag errors.
+  // XmlEditor only handles business-rule / data violations — never tag-mismatch errors.
   useEffect(() => {
-    if (!initialXml) navigate('/tools/tiss-validator', { replace: true });
-  }, [initialXml, navigate]);
+    if (!initialXml) {
+      navigate('/tools/tiss-validator', { replace: true });
+      return;
+    }
+    const hasSyntaxErrors = initialErrors.some(e => e.code === 'xml-syntax-error');
+    if (hasSyntaxErrors) {
+      navigate('/tools/tiss-validator/raw-editor', {
+        replace: true,
+        state: { xml: initialXml, errors: initialErrors, fileName },
+      });
+    }
+  }, [initialXml, initialErrors, fileName, navigate]);
 
   // Parse once, store in refs
   const docRef    = useRef(null);
